@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<title>Apartment Water Bill</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#f6f7f9;--card:#fff;--ink:#14181f;--muted:#5b6472;--line:#e3e6eb;--accent:#0e6ba8;--accent-soft:#e6f1f9;
+    --ok:#1f7a4d;--ok-soft:#e5f4ec;--warn:#a35b00;--warn-soft:#fdf1e1;--bad:#b42318;--bad-soft:#fdecea;--mono:"JetBrains Mono",ui-monospace,monospace}
+  @media (prefers-color-scheme:dark){:root{--bg:#0f1217;--card:#171b22;--ink:#e8ebf0;--muted:#98a1ae;--line:#2a303a;--accent:#5fb0e6;--accent-soft:#16283a;
+    --ok:#5cc996;--ok-soft:#14291f;--warn:#f0a94b;--warn-soft:#2e2312;--bad:#ff7b6e;--bad-soft:#331a18}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px 16px 64px}
+  header{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+  h1{font-size:22px;margin:0}
+  .sub{color:var(--muted);margin-top:4px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px;font-weight:600}
+  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:500}
+  input{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+  input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+  input:disabled{background:transparent;border-color:transparent;opacity:1;-webkit-text-fill-color:var(--ink);padding-left:0;padding-right:0}
+  input.num{font-family:var(--mono);text-align:right}
+  input.err{border-color:var(--bad);background:var(--bad-soft)}
+  .btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  button{font:inherit;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.danger{color:var(--bad)}
+  button.link{border:none;background:none;color:var(--accent);padding:4px 6px}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+  th:first-child,td:first-child{text-align:left}
+  td.m{font-family:var(--mono)}
+  td input{max-width:110px;padding:6px 8px}
+  tfoot td{font-weight:700;border-top:2px solid var(--line);border-bottom:none}
+  .tablewrap{overflow-x:auto}
+  .tag{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;margin-left:6px;font-family:Inter,sans-serif}
+  .tag.roll{background:var(--accent-soft);color:var(--accent)}
+  .tag.warn{background:var(--warn-soft);color:var(--warn)}
+  .stats{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .stat{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .stat .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .stat .v{font-family:var(--mono);font-size:18px;font-weight:600;margin-top:2px}
+  .stat .h{font-size:11px;color:var(--muted)}
+  .msgs{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+  .msg{padding:8px 12px;border-radius:8px;font-size:13px}
+  .msg.warn{background:var(--warn-soft);color:var(--warn)}
+  .msg.bad{background:var(--bad-soft);color:var(--bad)}
+  .msg.ok{background:var(--ok-soft);color:var(--ok)}
+  .hist{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{padding:5px 10px;border-radius:999px;border:1px solid var(--line);cursor:pointer;font-weight:500;font-size:13px;background:var(--card);color:var(--ink)}
+  .chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .muted{color:var(--muted)} .small{font-size:12px}
+  .badge{font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+  .badge.edit{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+  body:not(.is-editor) .editor-only{display:none !important}
+  .versions{list-style:none;margin:0;padding:0}
+  .versions li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+  .versions li:last-child{border-bottom:none}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;max-width:90vw;text-align:center}
+  .toast.show{opacity:1}
+  details summary{cursor:pointer;color:var(--muted);font-weight:600}
+  details li{color:var(--muted)}
+  code{font-family:var(--mono);font-size:12px;background:var(--bg);padding:1px 5px;border-radius:4px}
+
+  @media (max-width:680px){
+    .wrap{padding:16px 12px 40px} body.is-editor .wrap{padding-bottom:100px}
+    h1{font-size:19px} input{font-size:16px}
+    body.is-editor #editBar{position:fixed;left:0;right:0;bottom:0;z-index:5;padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+      background:var(--card);border-top:1px solid var(--line);display:grid !important;grid-template-columns:1fr 1fr;gap:8px;margin:0 !important}
+    #editBar button{padding:12px}
+    .card{padding:14px;border-radius:10px}
+    .tablewrap{overflow:visible} table thead{display:none}
+    table,tbody,tfoot,tr,td{display:block;width:100%}
+    tbody tr,tfoot tr{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+    tfoot tr{background:var(--bg)}
+    td{border:none;padding:0;text-align:left !important;white-space:normal}
+    td::before{content:attr(data-l);display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-bottom:2px;font-family:Inter,sans-serif}
+    td:first-child{grid-column:1/-1;font-size:16px} td:first-child::before{display:none}
+    td[data-o="amount"],tfoot td:last-child{grid-column:1/-1;font-size:17px;font-weight:700;border-top:1px dashed var(--line);padding-top:8px}
+    td input{max-width:none} input.num:disabled{text-align:left} td:empty{display:none} tfoot td{border-top:none}
+    .stat .v{font-size:16px} .btns>button{flex:1 1 auto}
+    body.is-editor .toast{bottom:calc(90px + env(safe-area-inset-bottom))}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Apartment Water Bill</h1>
+      <div class="sub">Monthly water bill split by meter usage. Units not covered by house meters are common usage, split equally.</div>
+    </div>
+    <span class="badge" id="mode">View only</span>
+  </header>
+
+  <div class="card">
+    <h2>Months</h2>
+    <div class="hist" id="hist"><span class="muted">Loading…</span></div>
+    <div class="muted small" id="lastUpdated" style="margin-top:8px"></div>
+    <div class="btns editor-only" id="editBar" style="margin-top:12px">
+      <button id="newMonth">+ Start next month</button>
+      <button id="save" class="primary">Save month</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Water board bill</h2>
+    <div class="grid">
+      <div><label for="month">Billing month</label><input id="month" type="month" disabled></div>
+      <div><label for="billUnits">Total units on bill</label><input id="billUnits" class="num" inputmode="decimal" disabled></div>
+      <div><label for="billAmount">Total bill amount (LKR)</label><input id="billAmount" class="num" inputmode="decimal" disabled></div>
+      <div><label for="fixedCharge">Fixed charge split equally (LKR)</label><input id="fixedCharge" class="num" inputmode="decimal" disabled></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Meter readings &amp; split</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>House</th><th>Previous</th><th>Current</th><th>Own units</th><th>Common share</th><th>Billable units</th><th>Amount (LKR)</th></tr></thead>
+        <tbody id="rows"></tbody>
+        <tfoot><tr id="totals"></tr></tfoot>
+      </table>
+    </div>
+    <div class="msgs" id="msgs"></div>
+  </div>
+
+  <div class="card">
+    <h2>Summary</h2>
+    <div class="stats" id="stats"></div>
+    <div class="btns" style="margin-top:14px">
+      <button id="copy">Copy summary (WhatsApp)</button>
+      <button id="del" class="danger editor-only">Delete this month</button>
+    </div>
+  </div>
+
+  <div class="card editor-only">
+    <h2>Versions</h2>
+    <div class="muted small" style="margin-bottom:8px">A copy is kept before every save. Restore any version if something was changed or deleted by mistake.</div>
+    <ul class="versions" id="versions"></ul>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>How the calculation works</summary>
+      <ul>
+        <li><b>Own units</b> = current − previous. Meters are 4-digit (0–9999); if current &lt; previous the meter rolled over: <code>(10000 − previous) + current</code>. E.g. 9999 → 100 = 101 units.</li>
+        <li><b>Common units</b> = bill units − all house units, split equally. If house meters exceed the bill, the difference is taken off equally (and flagged).</li>
+        <li><b>Rate</b> = (bill amount − fixed charge) ÷ bill units. <b>Amount</b> = fixed ÷ houses + billable units × rate, rounded so the total equals the bill exactly.</li>
+      </ul>
+    </details>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  // ---- Config: the house list used for new months ----
+  const HOUSES = ["11C", "11D", "1/1", "1/2", "1/3", "2/1", "2/2", "2/3", "3/1", "3/2", "3/3"];
+
+  const $ = id => document.getElementById(id);
+  const num = v => { if (v === "" || v == null) return NaN; const n = Number(String(v).replace(/,/g, "")); return Number.isFinite(n) ? n : NaN; };
+  const fmt = (n, d = 2) => Number.isFinite(n) ? n.toLocaleString("en-LK", { minimumFractionDigits: d, maximumFractionDigits: d }) : "—";
+  const fmtU = n => Number.isFinite(n) ? (Math.round(n * 100) / 100).toLocaleString("en-LK", { maximumFractionDigits: 2 }) : "—";
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const monthLabel = s => { const [y, m] = s.split("-").map(Number); return new Date(y, m - 1, 1).toLocaleString("en-GB", { month: "short", year: "numeric" }); };
+  const nextMonth = s => { const [y, m] = s.split("-").map(Number); const d = new Date(y, m, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
+  const thisMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
+  const fmtTime = iso => iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+
+  // ---- Edit key from the link: https://site/#key=XXXX ----
+  const editKey = new URLSearchParams(location.hash.slice(1)).get("key");
+  let editor = null;            // editor name once the key is verified
+  let doc = { houses: HOUSES, months: [] };
+  let cur = null;               // month being viewed/edited
+
+  async function api(query = "", opts = {}) {
+    const res = await fetch("/api/data" + query, { ...opts, headers: { "content-type": "application/json", ...(editKey ? { "x-edit-key": editKey } : {}) } });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw Object.assign(new Error(body.error || `HTTP ${res.status}`), { status: res.status });
+    return body;
+  }
+
+  // ---- Calculation ----
+  const housesOf = m => m?.houses?.length ? m.houses : (doc.houses?.length ? doc.houses : HOUSES);
+  function compute(m) {
+    const houses = housesOf(m), n = houses.length;
+    const billUnits = num(m.billUnits), billAmount = num(m.billAmount);
+    const fixed = Number.isFinite(num(m.fixedCharge)) ? num(m.fixedCharge) : 0;
+    const errors = [], warnings = [];
+    const rows = houses.map(h => {
+      const r = m.readings?.[h] || {}, prev = num(r.prev), curr = num(r.curr);
+      const bad = [["prev", prev], ["curr", curr]].filter(([, v]) => !Number.isInteger(v) || v < 0 || v > 9999).map(([k]) => k);
+      const rolled = !bad.length && curr < prev;
+      const units = bad.length ? NaN : rolled ? 10000 - prev + curr : curr - prev;
+      return { house: h, prev, curr, bad, rolled, units, suspicious: units > 1500 };
+    });
+    const missing = rows.filter(r => r.bad.length);
+    if (missing.length) errors.push(`Enter readings (0–9999) for: ${missing.map(r => r.house).join(", ")}`);
+    if (!(billUnits > 0)) errors.push("Enter the total units from the bill.");
+    if (!(billAmount > 0)) errors.push("Enter the total bill amount.");
+    if (fixed < 0 || fixed > billAmount) errors.push("Fixed charge must be between 0 and the bill amount.");
+    rows.filter(r => r.rolled).forEach(r => warnings.push({ t: "warn", s: `${r.house}: meter rolled over (${r.prev} → ${r.curr}) = ${r.units} units.` }));
+    rows.filter(r => r.suspicious).forEach(r => warnings.push({ t: "warn", s: `${r.house}: ${r.units} units looks too high — check the reading.` }));
+    const houseTotal = rows.reduce((s, r) => s + (Number.isFinite(r.units) ? r.units : 0), 0);
+    const ok = !errors.length;
+    let common = NaN, commonEach = NaN, rate = NaN;
+    if (ok) {
+      common = billUnits - houseTotal; commonEach = common / n; rate = (billAmount - fixed) / billUnits;
+      if (common < 0) warnings.push({ t: "bad", s: `House meters total ${fmtU(houseTotal)} units — ${fmtU(-common)} more than the bill. The excess is taken off equally. Double-check readings.` });
+      rows.forEach(r => { r.commonShare = commonEach; r.billable = r.units + commonEach; r.raw = fixed / n + r.billable * rate; });
+      // Round to cents so the total equals the bill exactly (largest remainder)
+      const cents = rows.map(r => Math.floor(r.raw * 100));
+      let diff = Math.round(billAmount * 100) - cents.reduce((s, c) => s + c, 0);
+      rows.map((r, i) => [i, r.raw * 100 - Math.floor(r.raw * 100)]).sort((a, b) => b[1] - a[1])
+        .forEach(([i]) => { if (diff > 0) { cents[i]++; diff--; } });
+      rows.forEach((r, i) => r.amount = cents[i] / 100);
+    }
+    return { rows, billUnits, billAmount, fixed, houseTotal, common, commonEach, rate, ok, errors, warnings };
+  }
+
+  // ---- Months ----
+  const saved = month => doc.months.find(m => m.month === month);
+  function blankMonth(month) {
+    const prev = doc.months.filter(m => m.month < month).sort((a, b) => b.month.localeCompare(a.month))[0];
+    const readings = {};
+    HOUSES.forEach(h => readings[h] = { prev: prev?.readings?.[h]?.curr ?? "", curr: "" });
+    return { month, houses: HOUSES, billUnits: "", billAmount: "", fixedCharge: "", readings };
+  }
+  const selectLatest = () => { cur = doc.months.length ? clone(doc.months[doc.months.length - 1]) : blankMonth(thisMonth()); };
+
+  // ---- Render ----
+  function render() {
+    document.body.classList.toggle("is-editor", !!editor);
+    $("mode").textContent = editor ? `Editing as ${editor}` : "View only";
+    $("mode").classList.toggle("edit", !!editor);
+
+    const h = $("hist"); h.innerHTML = "";
+    if (!doc.months.length && !editor) h.innerHTML = `<span class="muted">No bills published yet.</span>`;
+    doc.months.forEach(m => {
+      const b = Object.assign(document.createElement("button"), { className: "chip" + (m.month === cur.month ? " active" : ""), textContent: monthLabel(m.month) });
+      b.onclick = () => { cur = clone(m); render(); };
+      h.appendChild(b);
+    });
+    if (editor && !saved(cur.month)) h.insertAdjacentHTML("beforeend", `<span class="chip active">${monthLabel(cur.month)} (unsaved)</span>`);
+    $("lastUpdated").textContent = doc.updatedAt ? `Last updated ${fmtTime(doc.updatedAt)} by ${doc.updatedBy}` : "";
+
+    $("month").value = cur.month;
+    for (const id of ["month", "billUnits", "billAmount", "fixedCharge"]) $(id).disabled = !editor;
+    for (const id of ["billUnits", "billAmount", "fixedCharge"]) $(id).value = cur[id] ?? "";
+
+    $("rows").innerHTML = housesOf(cur).map(h => {
+      const v = k => esc(cur.readings?.[h]?.[k] ?? ""), dis = editor ? "" : "disabled";
+      return `<tr data-house="${esc(h)}"><td><b>${esc(h)}</b></td>
+        <td data-l="Previous"><input class="num" data-k="prev" inputmode="numeric" maxlength="4" value="${v("prev")}" ${dis}></td>
+        <td data-l="Current"><input class="num" data-k="curr" inputmode="numeric" maxlength="4" value="${v("curr")}" ${dis}></td>
+        <td class="m" data-l="Own units" data-o="units"></td><td class="m" data-l="Common share" data-o="common"></td>
+        <td class="m" data-l="Billable units" data-o="billable"></td><td class="m" data-l="Amount (LKR)" data-o="amount"></td></tr>`;
+    }).join("");
+    renderResults();
+  }
+
+  function renderResults() {
+    const r = compute(cur);
+    r.rows.forEach(row => {
+      const tr = [...$("rows").children].find(t => t.dataset.house === row.house); if (!tr) return;
+      if (editor) for (const k of ["prev", "curr"]) tr.querySelector(`[data-k="${k}"]`).classList.toggle("err", row.bad.includes(k) && (cur.readings?.[row.house]?.[k] ?? "") !== "");
+      tr.querySelector('[data-o="units"]').innerHTML = (Number.isFinite(row.units) ? fmtU(row.units) : "—")
+        + (row.rolled ? `<span class="tag roll">rollover</span>` : "") + (row.suspicious ? `<span class="tag warn">check</span>` : "");
+      tr.querySelector('[data-o="common"]').textContent = r.ok ? fmtU(row.commonShare) : "—";
+      tr.querySelector('[data-o="billable"]').textContent = r.ok ? fmtU(row.billable) : "—";
+      tr.querySelector('[data-o="amount"]').textContent = r.ok ? fmt(row.amount) : "—";
+    });
+    const total = r.ok ? r.rows.reduce((s, x) => s + x.amount, 0) : NaN;
+    $("totals").innerHTML = `<td><b>Total</b></td><td></td><td></td><td class="m" data-l="House units">${fmtU(r.houseTotal)}</td>
+      <td class="m" data-l="Common units">${r.ok ? fmtU(r.common) : "—"}</td><td class="m" data-l="Billable units">${r.ok ? fmtU(r.billUnits) : "—"}</td>
+      <td class="m" data-l="Total (LKR)">${r.ok ? fmt(total) : "—"}</td>`;
+    $("msgs").innerHTML = (editor ? r.errors.map(e => `<div class="msg bad">${esc(e)}</div>`).join("") : "")
+      + r.warnings.map(w => `<div class="msg ${w.t}">${esc(w.s)}</div>`).join("")
+      + (r.ok ? `<div class="msg ok">Tallies: ${fmtU(r.houseTotal)} house + ${fmtU(r.common)} common = ${fmtU(r.billUnits)} bill units · LKR ${fmt(total)} = bill LKR ${fmt(r.billAmount)}</div>` : "");
+    $("stats").innerHTML = [
+      ["Bill units", fmtU(r.billUnits), ""], ["House meters total", fmtU(r.houseTotal), ""],
+      ["Common units", r.ok ? fmtU(r.common) : "—", r.ok ? `${fmt(r.common / r.billUnits * 100, 1)}% of bill` : ""],
+      ["Common per house", r.ok ? fmtU(r.commonEach) : "—", "units"], ["Rate per unit", r.ok ? fmt(r.rate) : "—", "LKR"],
+    ].map(([k, v, h]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="h">${h}</div></div>`).join("");
+    $("copy").disabled = !r.ok;
+    $("del").disabled = !saved(cur.month);
+  }
+
+  async function renderVersions() {
+    if (!editor) return;
+    try {
+      const { versions } = await api("?history=1");
+      $("versions").innerHTML = versions.length ? versions.map(v => `<li><div><b>Before: ${esc(v.note || "a save")}</b>
+        <div class="muted small">Change made by ${esc(v.by)} · ${esc(fmtTime(v.at))}</div></div>
+        <button class="link" data-restore="${esc(v.id)}">Restore</button></li>`).join("") : `<li class="muted">No versions yet.</li>`;
+    } catch (e) { $("versions").innerHTML = `<li class="muted">${esc(e.message)}</li>`; }
+  }
+
+  // ---- Save whole document ----
+  async function persist(months, note) {
+    const data = { houses: doc.houses?.length ? doc.houses : HOUSES, months: months.sort((a, b) => a.month.localeCompare(b.month)) };
+    doc = await api("", { method: "PUT", body: JSON.stringify({ data, note }) });
+    renderVersions();
+  }
+
+  // ---- Events ----
+  $("rows").addEventListener("input", e => {
+    const inp = e.target.closest("input"); if (!inp || !editor) return;
+    inp.value = inp.value.replace(/\D/g, "").slice(0, 4);
+    const h = inp.closest("tr").dataset.house;
+    ((cur.readings ||= {})[h] ||= { prev: "", curr: "" })[inp.dataset.k] = inp.value;
+    renderResults();
+  });
+  ["billUnits", "billAmount", "fixedCharge"].forEach(id => $(id).addEventListener("input", e => { cur[id] = e.target.value.trim(); renderResults(); }));
+  $("month").addEventListener("change", e => {
+    const v = e.target.value; if (!v) return;
+    cur = saved(v) ? clone(saved(v)) : { ...cur, month: v };
+    render();
+  });
+  $("newMonth").onclick = () => {
+    let m = doc.months.length ? nextMonth(doc.months[doc.months.length - 1].month) : thisMonth();
+    while (saved(m)) m = nextMonth(m);
+    cur = blankMonth(m); render(); toast(`Started ${monthLabel(m)} — previous readings filled in`);
+  };
+  $("save").onclick = async () => {
+    const r = compute(cur);
+    if (!r.ok) return toast("Fix the highlighted errors first");
+    $("save").disabled = true;
+    try {
+      const month = { ...clone(cur), houses: housesOf(cur), amounts: Object.fromEntries(r.rows.map(x => [x.house, x.amount])) };
+      await persist([...doc.months.filter(m => m.month !== cur.month), month], `${saved(cur.month) ? "Edited" : "Added"} ${monthLabel(cur.month)}`);
+      cur = clone(saved(month.month)); render(); toast(`Saved ${monthLabel(cur.month)}`);
+    } catch (e) { toast("Couldn’t save: " + e.message); }
+    finally { $("save").disabled = false; }
+  };
+  $("del").onclick = async () => {
+    const b = $("del");
+    if (b.dataset.armed !== "1") { b.dataset.armed = "1"; b.textContent = "Tap again to delete"; setTimeout(() => { b.dataset.armed = ""; b.textContent = "Delete this month"; }, 3000); return; }
+    b.dataset.armed = ""; b.textContent = "Delete this month";
+    const label = monthLabel(cur.month);
+    try { await persist(doc.months.filter(m => m.month !== cur.month), `Deleted ${label}`); selectLatest(); render(); toast(`Deleted ${label} — restore it from Versions`); }
+    catch (e) { toast("Couldn’t delete: " + e.message); }
+  };
+  $("versions").addEventListener("click", async e => {
+    const id = e.target.closest("[data-restore]")?.dataset.restore; if (!id) return;
+    try { doc = await api("?restore=" + encodeURIComponent(id), { method: "POST" }); selectLatest(); render(); renderVersions(); toast("Version restored"); }
+    catch (err) { toast("Couldn’t restore: " + err.message); }
+  });
+  $("copy").onclick = async () => {
+    const r = compute(cur); if (!r.ok) return;
+    const lines = [`*Water bill – ${monthLabel(cur.month)}*`, `Bill: ${fmtU(r.billUnits)} units · LKR ${fmt(r.billAmount)}`,
+      `Common: ${fmtU(r.common)} units (${fmtU(r.commonEach)}/house) · LKR ${fmt(r.rate)}/unit`, "",
+      ...r.rows.map(x => `${x.house}: ${x.prev}→${x.curr} = ${fmtU(x.units)}u → *LKR ${fmt(x.amount)}*`), "", location.origin];
+    try { await navigator.clipboard.writeText(lines.join("\n")); toast("Copied"); } catch (_) { toast("Clipboard blocked"); }
+  };
+
+  let tt;
+  function toast(s) { const t = $("toast"); t.textContent = s; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 2800); }
+
+  // ---- Boot ----
+  (async () => {
+    try { doc = await api(); } catch (e) { $("hist").innerHTML = `<span class="msg bad">Couldn’t load: ${esc(e.message)}</span>`; return; }
+    if (editKey) {
+      try { editor = (await api("?check=1")).name; } catch (_) { toast("This edit link is no longer valid — view only"); }
+    }
+    selectLatest(); render(); renderVersions();
+  })();
+})();
+</script>
+</body>
+</html>
