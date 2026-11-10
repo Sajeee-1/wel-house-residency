@@ -1,0 +1,10 @@
+{
+  "name": "wel-house-residency",
+  "pages_build_output_dir": "./public",
+  "kv_namespaces": [
+    {
+      "binding": "DATA",
+      "id": "3ed79d37e76a405eaeea3ec89d850293"
+    }
+  ]
+}
