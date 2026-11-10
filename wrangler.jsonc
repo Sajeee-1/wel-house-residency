@@ -1,10 +1,12 @@
 {
   "name": "wel-house-residency",
   "pages_build_output_dir": "./public",
+  "compatibility_date": "2024-11-10",
   "kv_namespaces": [
     {
       "binding": "DATA",
-      "id": "3ed79d37e76a405eaeea3ec89d850293"
+      "id": "3ed79d37e76a405eaeea3ec89d850293",
+      "preview_id": "3ed79d37e76a405eaeea3ec89d850293"
     }
   ]
 }
