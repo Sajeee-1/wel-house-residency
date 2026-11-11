@@ -39,7 +39,8 @@
   th:first-child,td:first-child{text-align:left}
   td.m{font-family:var(--mono)}
   td input{max-width:110px;padding:6px 8px}
-  tfoot td{font-weight:700;border-top:2px solid var(--line);border-bottom:none}
+  tfoot td{font-weight:700;border-top:2px solid var(--accent);border-bottom:none;background:var(--accent-soft)}
+  tfoot td:last-child{color:var(--accent);font-size:16px;font-family:var(--mono)}
   .tablewrap{overflow-x:auto}
   .tag{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;margin-left:6px;font-family:Inter,sans-serif}
   .tag.roll{background:var(--accent-soft);color:var(--accent)}
@@ -69,6 +70,12 @@
   details summary{cursor:pointer;color:var(--muted);font-weight:600}
   details li{color:var(--muted)}
   code{font-family:var(--mono);font-size:12px;background:var(--bg);padding:1px 5px;border-radius:4px}
+  .house-badge{display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:12px;padding:3px 12px;border-radius:6px;background:var(--accent-soft);color:var(--accent);min-width:54px;letter-spacing:.03em}
+  tbody tr{transition:background .12s}
+  tbody tr:nth-child(even){background:var(--bg)}
+  tbody tr:hover{background:var(--accent-soft)}
+  td[data-o="amount"]{font-weight:700;font-size:14px}
+  .th-amount{color:var(--ink) !important;font-weight:700 !important}
 
   @media (max-width:680px){
     .wrap{padding:16px 12px 40px} body.is-editor .wrap{padding-bottom:100px}
@@ -80,7 +87,7 @@
     .tablewrap{overflow:visible} table thead{display:none}
     table,tbody,tfoot,tr,td{display:block;width:100%}
     tbody tr,tfoot tr{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
-    tfoot tr{background:var(--bg)}
+    tfoot tr{background:var(--accent-soft);border-color:var(--accent)}
     td{border:none;padding:0;text-align:left !important;white-space:normal}
     td::before{content:attr(data-l);display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-bottom:2px;font-family:Inter,sans-serif}
     td:first-child{grid-column:1/-1;font-size:16px} td:first-child::before{display:none}
@@ -125,7 +132,7 @@
     <h2>Meter readings &amp; split</h2>
     <div class="tablewrap">
       <table>
-        <thead><tr><th>House</th><th>Previous</th><th>Current</th><th>Own units</th><th>Common share</th><th>Billable units</th><th>Amount (LKR)</th></tr></thead>
+        <thead><tr><th>House</th><th>Previous</th><th>Current</th><th>Own units</th><th>Common share</th><th>Billable units</th><th class="th-amount">Amount (LKR)</th></tr></thead>
         <tbody id="rows"></tbody>
         <tfoot><tr id="totals"></tr></tfoot>
       </table>
@@ -260,7 +267,7 @@
 
     $("rows").innerHTML = housesOf(cur).map(h => {
       const v = k => esc(cur.readings?.[h]?.[k] ?? ""), dis = editor ? "" : "disabled";
-      return `<tr data-house="${esc(h)}"><td><b>${esc(h)}</b></td>
+      return `<tr data-house="${esc(h)}"><td><span class="house-badge">${esc(h)}</span></td>
         <td data-l="Previous"><input class="num" data-k="prev" inputmode="numeric" maxlength="4" value="${v("prev")}" ${dis}></td>
         <td data-l="Current"><input class="num" data-k="curr" inputmode="numeric" maxlength="4" value="${v("curr")}" ${dis}></td>
         <td class="m" data-l="Own units" data-o="units"></td><td class="m" data-l="Common share" data-o="common"></td>
@@ -281,7 +288,7 @@
       tr.querySelector('[data-o="amount"]').textContent = r.ok ? fmt(row.amount) : "—";
     });
     const total = r.ok ? r.rows.reduce((s, x) => s + x.amount, 0) : NaN;
-    $("totals").innerHTML = `<td><b>Total</b></td><td></td><td></td><td class="m" data-l="House units">${fmtU(r.houseTotal)}</td>
+    $("totals").innerHTML = `<td><span class="house-badge" style="background:var(--accent);color:#fff">Total</span></td><td></td><td></td><td class="m" data-l="House units">${fmtU(r.houseTotal)}</td>
       <td class="m" data-l="Common units">${r.ok ? fmtU(r.common) : "—"}</td><td class="m" data-l="Billable units">${r.ok ? fmtU(r.billUnits) : "—"}</td>
       <td class="m" data-l="Total (LKR)">${r.ok ? fmt(total) : "—"}</td>`;
     $("msgs").innerHTML = (editor ? r.errors.map(e => `<div class="msg bad">${esc(e)}</div>`).join("") : "")

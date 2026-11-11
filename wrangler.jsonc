@@ -5,6 +5,9 @@
   "assets": {
     "directory": "./public"
   },
+  "vars": {
+    "MY_VARIABLE": "value"
+  },
   "kv_namespaces": [
     {
       "binding": "DATA",
