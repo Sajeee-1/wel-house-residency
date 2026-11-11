@@ -43,6 +43,23 @@ function validate(data) {
       const r = m.readings?.[h] || {};
       if (!/^\d{1,4}$/.test(String(r.prev ?? "")) || !/^\d{1,4}$/.test(String(r.curr ?? ""))) return `Invalid reading for ${h} in ${m.month}`;
     }
+    if (m.maint != null) {
+      if (typeof m.maint !== "object" || Array.isArray(m.maint)) return `Invalid maint for ${m.month}`;
+      const fee = Number(m.maint.feePerHouse ?? 0);
+      if (!Number.isFinite(fee) || fee < 0) return `Invalid feePerHouse for ${m.month}`;
+      if (m.maint.openingBalance != null && !Number.isFinite(Number(m.maint.openingBalance))) return `Invalid openingBalance for ${m.month}`;
+      if (!Array.isArray(m.maint.expenses ?? [])) return `Invalid expenses for ${m.month}`;
+      for (const e of m.maint.expenses || []) {
+        if (!e.id || !e.date || !e.desc || !e.group || !(Number(e.amount) >= 0)) return `Invalid expense entry in ${m.month}`;
+      }
+    }
+    if (m.other != null) {
+      if (!Array.isArray(m.other.transactions ?? [])) return `Invalid other for ${m.month}`;
+      for (const t of m.other.transactions || []) {
+        if (!t.id || !t.date || !t.desc || !["income", "expense"].includes(t.type) || !(Number(t.amount) >= 0))
+          return `Invalid other transaction in ${m.month}`;
+      }
+    }
   }
   return null;
 }

@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
-<title>Apartment Water Bill</title>
+<title>Wel House Residency</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#f6f7f9;--card:#fff;--ink:#14181f;--muted:#5b6472;--line:#e3e6eb;--accent:#0e6ba8;--accent-soft:#e6f1f9;
     --ok:#1f7a4d;--ok-soft:#e5f4ec;--warn:#a35b00;--warn-soft:#fdf1e1;--bad:#b42318;--bad-soft:#fdecea;--mono:"JetBrains Mono",ui-monospace,monospace}
-  @media (prefers-color-scheme:dark){:root{--bg:#0f1217;--card:#171b22;--ink:#e8ebf0;--muted:#98a1ae;--line:#2a303a;--accent:#5fb0e6;--accent-soft:#16283a;
+  @media(prefers-color-scheme:dark){:root{--bg:#0f1217;--card:#171b22;--ink:#e8ebf0;--muted:#98a1ae;--line:#2a303a;--accent:#5fb0e6;--accent-soft:#16283a;
     --ok:#5cc996;--ok-soft:#14291f;--warn:#f0a94b;--warn-soft:#2e2312;--bad:#ff7b6e;--bad-soft:#331a18}}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,sans-serif}
@@ -26,6 +26,8 @@
   input:disabled{background:transparent;border-color:transparent;opacity:1;-webkit-text-fill-color:var(--ink);padding-left:0;padding-right:0}
   input.num{font-family:var(--mono);text-align:right}
   input.err{border-color:var(--bad);background:var(--bad-soft)}
+  select.sel{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+  select.sel:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
   .btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   button{font:inherit;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
   button:hover{border-color:var(--accent)}
@@ -76,8 +78,13 @@
   tbody tr:hover{background:var(--accent-soft)}
   td[data-o="amount"]{font-weight:700;font-size:14px}
   .th-amount{color:var(--ink) !important;font-weight:700 !important}
+  /* Tab bar */
+  .tabs{display:flex;gap:2px;background:var(--line);border-radius:10px;padding:3px;margin-bottom:16px}
+  .tab-btn{flex:1;padding:8px 4px;border:none;border-radius:8px;background:transparent;color:var(--muted);font:600 13px/1 Inter,system-ui,sans-serif;cursor:pointer;transition:background .12s,color .12s;white-space:nowrap}
+  .tab-btn.active{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+  .tab-btn:hover:not(.active){color:var(--ink)}
 
-  @media (max-width:680px){
+  @media(max-width:680px){
     .wrap{padding:16px 12px 40px} body.is-editor .wrap{padding-bottom:100px}
     h1{font-size:19px} input{font-size:16px}
     body.is-editor #editBar{position:fixed;left:0;right:0;bottom:0;z-index:5;padding:10px 12px calc(10px + env(safe-area-inset-bottom));
@@ -95,6 +102,7 @@
     td input{max-width:none} input.num:disabled{text-align:left} td:empty{display:none} tfoot td{border-top:none}
     .stat .v{font-size:16px} .btns>button{flex:1 1 auto}
     body.is-editor .toast{bottom:calc(90px + env(safe-area-inset-bottom))}
+    .tab-btn{font-size:11px;padding:7px 2px}
   }
 </style>
 </head>
@@ -102,66 +110,173 @@
 <div class="wrap">
   <header>
     <div>
-      <h1>Apartment Water Bill</h1>
-      <div class="sub">Monthly water bill split by meter usage. Units not covered by house meters are common usage, split equally.</div>
+      <h1>Wel House Residency</h1>
+      <div class="sub">Monthly billing &amp; maintenance management</div>
     </div>
     <span class="badge" id="mode">View only</span>
   </header>
 
+  <!-- Month selector — always visible above tabs -->
   <div class="card">
-    <h2>Months</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      <span style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600">Month</span>
+      <span class="muted small" id="lastUpdated"></span>
+    </div>
     <div class="hist" id="hist"><span class="muted">Loading…</span></div>
-    <div class="muted small" id="lastUpdated" style="margin-top:8px"></div>
     <div class="btns editor-only" id="editBar" style="margin-top:12px">
       <button id="newMonth">+ Start next month</button>
-      <button id="save" class="primary">Save month</button>
+      <button id="save" class="primary">Save</button>
     </div>
   </div>
 
-  <div class="card">
-    <h2>Water board bill</h2>
-    <div class="grid">
-      <div><label for="month">Billing month</label><input id="month" type="month" disabled></div>
-      <div><label for="billUnits">Total units on bill</label><input id="billUnits" class="num" inputmode="decimal" disabled></div>
-      <div><label for="billAmount">Total bill amount (LKR)</label><input id="billAmount" class="num" inputmode="decimal" disabled></div>
-      <div><label for="fixedCharge">Fixed charge split equally (LKR)</label><input id="fixedCharge" class="num" inputmode="decimal" disabled></div>
+  <!-- Tab bar -->
+  <div class="tabs" id="tabBar">
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="water">Water</button>
+    <button class="tab-btn" data-tab="maintenance">Maintenance</button>
+    <button class="tab-btn" data-tab="other">Other</button>
+  </div>
+
+  <!-- OVERVIEW TAB -->
+  <div class="tab-panel" id="tab-overview">
+    <div class="card">
+      <h2>Balance sheet</h2>
+      <div class="stats" id="overviewBalance"></div>
+    </div>
+    <div class="card">
+      <h2>Collection this month</h2>
+      <div class="stats" id="overviewCollection"></div>
+    </div>
+    <div class="card">
+      <h2>Outstanding payments</h2>
+      <div id="overviewUnpaid"></div>
+    </div>
+    <div class="card" id="overviewExpCard">
+      <h2>Expenses by group</h2>
+      <div id="overviewExpenses"></div>
     </div>
   </div>
 
-  <div class="card">
-    <h2>Meter readings &amp; split</h2>
-    <div class="tablewrap">
-      <table>
-        <thead><tr><th>House</th><th>Previous</th><th>Current</th><th>Own units</th><th>Common share</th><th>Billable units</th><th class="th-amount">Amount (LKR)</th></tr></thead>
-        <tbody id="rows"></tbody>
-        <tfoot><tr id="totals"></tr></tfoot>
-      </table>
+  <!-- WATER TAB -->
+  <div class="tab-panel" id="tab-water" hidden>
+    <div class="card">
+      <h2>Water board bill</h2>
+      <div class="grid">
+        <div><label for="month">Billing month</label><input id="month" type="month" disabled></div>
+        <div><label for="billUnits">Total units on bill</label><input id="billUnits" class="num" inputmode="decimal" disabled></div>
+        <div><label for="billAmount">Total bill amount (LKR)</label><input id="billAmount" class="num" inputmode="decimal" disabled></div>
+        <div><label for="fixedCharge">Fixed charge split equally (LKR)</label><input id="fixedCharge" class="num" inputmode="decimal" disabled></div>
+      </div>
     </div>
-    <div class="msgs" id="msgs"></div>
+    <div class="card">
+      <h2>Meter readings &amp; split</h2>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>House</th><th>Previous</th><th>Current</th><th>Own units</th><th>Common share</th><th>Billable units</th><th class="th-amount">Amount (LKR)</th></tr></thead>
+          <tbody id="rows"></tbody>
+          <tfoot><tr id="totals"></tr></tfoot>
+        </table>
+      </div>
+      <div class="msgs" id="msgs"></div>
+    </div>
+    <div class="card">
+      <h2>Summary</h2>
+      <div class="stats" id="stats"></div>
+      <div class="btns" style="margin-top:14px">
+        <button id="copy">Copy summary (WhatsApp)</button>
+        <button id="del" class="danger editor-only">Delete this month</button>
+      </div>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>Summary</h2>
-    <div class="stats" id="stats"></div>
-    <div class="btns" style="margin-top:14px">
-      <button id="copy">Copy summary (WhatsApp)</button>
-      <button id="del" class="danger editor-only">Delete this month</button>
+  <!-- MAINTENANCE TAB -->
+  <div class="tab-panel" id="tab-maintenance" hidden>
+    <div class="card" id="maintCard">
+      <h2>Maintenance fee &amp; collection</h2>
+      <div class="grid editor-only" style="margin-bottom:14px">
+        <div><label for="maintFee">Fee per house (LKR)</label><input id="maintFee" class="num" inputmode="decimal"></div>
+        <div><label for="maintOpening">Opening balance (LKR)</label><input id="maintOpening" class="num" inputmode="decimal"></div>
+      </div>
+      <div class="tablewrap">
+        <table id="maintTable">
+          <thead><tr>
+            <th>House</th>
+            <th style="text-align:left">Water bill</th>
+            <th style="text-align:left">Maintenance</th>
+            <th class="th-amount">Received</th>
+          </tr></thead>
+          <tbody id="maintRows"></tbody>
+          <tfoot><tr id="maintTotals"></tr></tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="card" id="expCard">
+      <h2>Expenses</h2>
+      <div class="editor-only" style="margin-bottom:14px">
+        <div class="grid">
+          <div><label for="expDate">Date</label><input id="expDate" type="date"></div>
+          <div><label for="expGroup">Group</label><select id="expGroup" class="sel"></select></div>
+          <div style="grid-column:1/-1"><label for="expDesc">Description</label><input id="expDesc" type="text" placeholder="e.g. Plumber call-out"></div>
+          <div><label for="expAmt">Amount (LKR)</label><input id="expAmt" class="num" inputmode="decimal"></div>
+          <div style="display:flex;align-items:flex-end"><button id="addExp" class="primary" style="width:100%">+ Add expense</button></div>
+        </div>
+      </div>
+      <div class="tablewrap">
+        <table id="expTable">
+          <thead><tr><th>Date</th><th style="text-align:left">Description</th><th>Group</th><th class="th-amount">Amount (LKR)</th><th class="editor-only" style="width:32px"></th></tr></thead>
+          <tbody id="expRows"></tbody>
+        </table>
+      </div>
+      <div id="expEmpty" class="muted small" style="margin-top:8px"></div>
+      <div class="stats" id="maintStats" style="margin-top:16px"></div>
+      <div id="expGroupStats"></div>
     </div>
   </div>
 
+  <!-- OTHER TRANSACTIONS TAB -->
+  <div class="tab-panel" id="tab-other" hidden>
+    <div class="card" id="otherCard">
+      <h2>Other Transactions</h2>
+      <div class="editor-only" style="margin-bottom:14px">
+        <div class="grid">
+          <div><label for="otherDate">Date</label><input id="otherDate" type="date"></div>
+          <div><label for="otherType">Type</label>
+            <select id="otherType" class="sel">
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+            </select>
+          </div>
+          <div style="grid-column:1/-1"><label for="otherDesc">Description</label><input id="otherDesc" type="text" placeholder="e.g. Late fee from 1/1"></div>
+          <div><label for="otherAmt">Amount (LKR)</label><input id="otherAmt" class="num" inputmode="decimal"></div>
+          <div style="display:flex;align-items:flex-end"><button id="addOther" class="primary" style="width:100%">+ Add transaction</button></div>
+        </div>
+      </div>
+      <div class="tablewrap">
+        <table id="otherTable">
+          <thead><tr><th>Date</th><th style="text-align:left">Description</th><th style="text-align:left">Type</th><th class="th-amount">Amount (LKR)</th><th class="editor-only" style="width:32px"></th></tr></thead>
+          <tbody id="otherRows"></tbody>
+        </table>
+      </div>
+      <div id="otherEmpty" class="muted small" style="margin-top:8px"></div>
+      <div class="stats" id="otherStats" style="margin-top:16px"></div>
+    </div>
+  </div>
+
+  <!-- Versions (editor-only, below all tabs) -->
   <div class="card editor-only">
     <h2>Versions</h2>
-    <div class="muted small" style="margin-bottom:8px">A copy is kept before every save. Restore any version if something was changed or deleted by mistake.</div>
+    <div class="muted small" style="margin-bottom:8px">A copy is kept before every save. Restore any version if something was changed by mistake.</div>
     <ul class="versions" id="versions"></ul>
   </div>
 
+  <!-- How it works -->
   <div class="card">
     <details>
-      <summary>How the calculation works</summary>
+      <summary>How the water bill calculation works</summary>
       <ul>
-        <li><b>Own units</b> = current − previous. Meters are 4-digit (0–9999); if current &lt; previous the meter rolled over: <code>(10000 − previous) + current</code>. E.g. 9999 → 100 = 101 units.</li>
-        <li><b>Common units</b> = bill units − all house units, split equally. If house meters exceed the bill, the difference is taken off equally (and flagged).</li>
-        <li><b>Rate</b> = (bill amount − fixed charge) ÷ bill units. <b>Amount</b> = fixed ÷ houses + billable units × rate, rounded so the total equals the bill exactly.</li>
+        <li><b>Own units</b> = current − previous. Meters are 4-digit (0–9999); if current &lt; previous the meter rolled over: <code>(10000 − previous) + current</code>.</li>
+        <li><b>Common units</b> = bill units − all house units, split equally. If house meters exceed the bill, the excess is taken off equally (and flagged).</li>
+        <li><b>Rate</b> = (bill amount − fixed charge) ÷ bill units. <b>Amount</b> = fixed ÷ houses + billable units × rate, rounded so total equals the bill exactly.</li>
       </ul>
     </details>
   </div>
@@ -170,8 +285,11 @@
 
 <script>
 (() => {
-  // ---- Config: the house list used for new months ----
-  const HOUSES = ["11C", "11D", "1/1", "1/2", "1/3", "2/1", "2/2", "2/3", "3/1", "3/2", "3/3"];
+  const HOUSES = ["11C","11D","1/1","1/2","1/3","2/1","2/2","2/3","3/1","3/2","3/3"];
+  const DEFAULT_FEE = 10000;
+  const EXPENSE_GROUPS = ["Repairs & Maintenance","Cleaning","Security","Utilities","Purchases","Others"];
+  const makeExpenseId = () => `e_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+  const makeOtherId   = () => `o_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
 
   const $ = id => document.getElementById(id);
   const num = v => { if (v === "" || v == null) return NaN; const n = Number(String(v).replace(/,/g, "")); return Number.isFinite(n) ? n : NaN; };
@@ -184,11 +302,11 @@
   const thisMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
   const fmtTime = iso => iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
 
-  // ---- Edit key from the link: https://site/#key=XXXX ----
   const editKey = new URLSearchParams(location.hash.slice(1)).get("key");
-  let editor = null;            // editor name once the key is verified
+  let editor = null;
   let doc = { houses: HOUSES, months: [] };
-  let cur = null;               // month being viewed/edited
+  let cur = null;
+  let curTab = "overview";
 
   async function api(query = "", opts = {}) {
     const res = await fetch("/api/data" + query, { ...opts, headers: { "content-type": "application/json", ...(editKey ? { "x-edit-key": editKey } : {}) } });
@@ -197,7 +315,7 @@
     return body;
   }
 
-  // ---- Calculation ----
+  // ---- Water bill calculation ----
   const housesOf = m => m?.houses?.length ? m.houses : (doc.houses?.length ? doc.houses : HOUSES);
   function compute(m) {
     const houses = housesOf(m), n = houses.length;
@@ -216,7 +334,7 @@
     if (!(billUnits > 0)) errors.push("Enter the total units from the bill.");
     if (!(billAmount > 0)) errors.push("Enter the total bill amount.");
     if (fixed < 0 || fixed > billAmount) errors.push("Fixed charge must be between 0 and the bill amount.");
-    rows.filter(r => r.rolled).forEach(r => warnings.push({ t: "warn", s: `${r.house}: meter rolled over (${r.prev} → ${r.curr}) = ${r.units} units.` }));
+    rows.filter(r => r.rolled).forEach(r => warnings.push({ t: "warn", s: `${r.house}: meter rolled over (${r.prev}→${r.curr}) = ${r.units} units.` }));
     rows.filter(r => r.suspicious).forEach(r => warnings.push({ t: "warn", s: `${r.house}: ${r.units} units looks too high — check the reading.` }));
     const houseTotal = rows.reduce((s, r) => s + (Number.isFinite(r.units) ? r.units : 0), 0);
     const ok = !errors.length;
@@ -225,7 +343,6 @@
       common = billUnits - houseTotal; commonEach = common / n; rate = (billAmount - fixed) / billUnits;
       if (common < 0) warnings.push({ t: "bad", s: `House meters total ${fmtU(houseTotal)} units — ${fmtU(-common)} more than the bill. The excess is taken off equally. Double-check readings.` });
       rows.forEach(r => { r.commonShare = commonEach; r.billable = r.units + commonEach; r.raw = fixed / n + r.billable * rate; });
-      // Round to cents so the total equals the bill exactly (largest remainder)
       const cents = rows.map(r => Math.floor(r.raw * 100));
       let diff = Math.round(billAmount * 100) - cents.reduce((s, c) => s + c, 0);
       rows.map((r, i) => [i, r.raw * 100 - Math.floor(r.raw * 100)]).sort((a, b) => b[1] - a[1])
@@ -235,43 +352,173 @@
     return { rows, billUnits, billAmount, fixed, houseTotal, common, commonEach, rate, ok, errors, warnings };
   }
 
+  // ---- Maintenance ----
+  function blankMaint(feePerHouse = DEFAULT_FEE, openingBalance = 0) {
+    const paid = {};
+    HOUSES.forEach(h => paid[h] = false);
+    return { feePerHouse, openingBalance, waterPaid: { ...paid }, maintPaid: { ...paid }, expenses: [] };
+  }
+  function computeMaint(m) {
+    const mt = m.maint || {};
+    const houses = housesOf(m);
+    const fee = num(mt.feePerHouse ?? DEFAULT_FEE);
+    const opening = num(mt.openingBalance ?? 0) || 0;
+    // backward-compat: fall back to old "paid" field
+    const paidHouses = houses.filter(h => mt.maintPaid?.[h] ?? mt.paid?.[h]);
+    const income = paidHouses.length * (Number.isFinite(fee) ? fee : 0);
+    const expenses = (mt.expenses || []).map(e => ({ ...e, amount: num(e.amount) || 0 }));
+    const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+    const closing = opening + income - totalExpenses;
+    const byGroup = {};
+    EXPENSE_GROUPS.forEach(g => byGroup[g] = 0);
+    expenses.forEach(e => { if (byGroup[e.group] != null) byGroup[e.group] += e.amount; });
+    return { fee, opening, paidHouses, income, expenses, totalExpenses, byGroup, closing };
+  }
+  function prevClosing(month) {
+    const prev = doc.months.filter(m => m.month < month && m.maint != null).sort((a, b) => b.month.localeCompare(a.month))[0];
+    return prev ? computeMaint(prev).closing : 0;
+  }
+
+  // ---- Other transactions ----
+  function blankOther() { return { transactions: [] }; }
+  function computeOther(m) {
+    const txns = (m.other?.transactions || []).map(t => ({ ...t, amount: num(t.amount) || 0 }));
+    const income = txns.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
+    const expenses = txns.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+    return { txns, income, expenses };
+  }
+
+  // ---- Overview calculation ----
+  function computeOverview(m) {
+    const water = compute(m);
+    const maint = computeMaint(m);
+    const other = computeOther(m);
+    const houses = housesOf(m);
+    const mt = m.maint || {};
+    const waterAmounts = {};
+    if (water.ok) water.rows.forEach(r => waterAmounts[r.house] = r.amount);
+    const waterPaidHouses = houses.filter(h => mt.waterPaid?.[h]);
+    const waterCollected = waterPaidHouses.reduce((s, h) => s + (waterAmounts[h] || 0), 0);
+    const closing = maint.opening + maint.income + other.income - maint.totalExpenses - other.expenses;
+    const unpaid = houses
+      .filter(h => !(mt.waterPaid?.[h]) || !(mt.maintPaid?.[h] ?? mt.paid?.[h]))
+      .map(h => ({
+        house: h,
+        waterPaid: !!mt.waterPaid?.[h],
+        maintPaid: !!(mt.maintPaid?.[h] ?? mt.paid?.[h]),
+        waterAmt: waterAmounts[h] || 0,
+        maintAmt: Number.isFinite(maint.fee) ? maint.fee : 0,
+      }));
+    return { water, maint, other, waterCollected, waterPaidHouses, waterAmounts, closing, unpaid };
+  }
+
   // ---- Months ----
   const saved = month => doc.months.find(m => m.month === month);
   function blankMonth(month) {
     const prev = doc.months.filter(m => m.month < month).sort((a, b) => b.month.localeCompare(a.month))[0];
     const readings = {};
     HOUSES.forEach(h => readings[h] = { prev: prev?.readings?.[h]?.curr ?? "", curr: "" });
-    return { month, houses: HOUSES, billUnits: "", billAmount: "", fixedCharge: "", readings };
+    const ob = prevClosing(month);
+    return { month, houses: HOUSES, billUnits: "", billAmount: "", fixedCharge: "", readings, maint: blankMaint(DEFAULT_FEE, ob), other: blankOther() };
   }
   const selectLatest = () => { cur = doc.months.length ? clone(doc.months[doc.months.length - 1]) : blankMonth(thisMonth()); };
 
-  // ---- Render ----
+  // ---- Tab switching ----
+  function switchTab(t) {
+    curTab = t;
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === t));
+    document.querySelectorAll(".tab-panel").forEach(p => { p.hidden = p.id !== `tab-${t}`; });
+    renderTab(t);
+  }
+  function renderTab(t) {
+    if (t === "overview")       renderOverview();
+    else if (t === "water")        renderWater();
+    else if (t === "maintenance")  renderMaintenance();
+    else if (t === "other")        renderOther();
+  }
+
+  // ---- Top-level render (month selector + active tab) ----
   function render() {
     document.body.classList.toggle("is-editor", !!editor);
     $("mode").textContent = editor ? `Editing as ${editor}` : "View only";
     $("mode").classList.toggle("edit", !!editor);
 
     const h = $("hist"); h.innerHTML = "";
-    if (!doc.months.length && !editor) h.innerHTML = `<span class="muted">No bills published yet.</span>`;
+    if (!doc.months.length && !editor) h.innerHTML = `<span class="muted">No data yet.</span>`;
     doc.months.forEach(m => {
       const b = Object.assign(document.createElement("button"), { className: "chip" + (m.month === cur.month ? " active" : ""), textContent: monthLabel(m.month) });
       b.onclick = () => { cur = clone(m); render(); };
       h.appendChild(b);
     });
     if (editor && !saved(cur.month)) h.insertAdjacentHTML("beforeend", `<span class="chip active">${monthLabel(cur.month)} (unsaved)</span>`);
-    $("lastUpdated").textContent = doc.updatedAt ? `Last updated ${fmtTime(doc.updatedAt)} by ${doc.updatedBy}` : "";
+    $("lastUpdated").textContent = doc.updatedAt ? `Updated ${fmtTime(doc.updatedAt)} by ${doc.updatedBy}` : "";
+    renderTab(curTab);
+  }
 
+  // ---- Overview tab ----
+  function renderOverview() {
+    const ov = computeOverview(cur);
+    const houses = housesOf(cur);
+    const closingColor = ov.closing < 0 ? "var(--bad)" : "var(--ok)";
+
+    $("overviewBalance").innerHTML = [
+      ["Opening balance", fmt(ov.maint.opening), "LKR"],
+      ["+ Maint collected", fmt(ov.maint.income), `${ov.maint.paidHouses.length} of ${houses.length} houses`],
+      ["+ Other income", fmt(ov.other.income), "LKR"],
+      ["− Maint expenses", fmt(ov.maint.totalExpenses), "LKR"],
+      ["− Other expenses", fmt(ov.other.expenses), "LKR"],
+      ["= Closing balance", `<span style="color:${closingColor};font-weight:700">${fmt(ov.closing)}</span>`, ov.closing < 0 ? "⚠ deficit" : "LKR"],
+    ].map(([k, v, hh]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="h">${hh}</div></div>`).join("");
+
+    $("overviewCollection").innerHTML = [
+      ["Water collected", fmt(ov.waterCollected), `${ov.waterPaidHouses.length} of ${houses.length} paid`],
+      ["Maint collected", fmt(ov.maint.income), `${ov.maint.paidHouses.length} of ${houses.length} paid`],
+      ["Other income", fmt(ov.other.income), "LKR"],
+      ["Total received", fmt(ov.waterCollected + ov.maint.income + ov.other.income), "this month"],
+    ].map(([k, v, hh]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="h">${hh}</div></div>`).join("");
+
+    if (ov.unpaid.length === 0) {
+      $("overviewUnpaid").innerHTML = `<div class="msg ok">All houses fully paid for ${monthLabel(cur.month)}.</div>`;
+    } else {
+      $("overviewUnpaid").innerHTML = ov.unpaid.map(u => {
+        const outstanding = (u.waterPaid ? 0 : u.waterAmt) + (u.maintPaid ? 0 : u.maintAmt);
+        return `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)">
+          <span class="house-badge">${esc(u.house)}</span>
+          <span style="font-size:12px;padding:2px 8px;border-radius:999px;background:${u.waterPaid ? "var(--ok-soft)" : "var(--warn-soft)"};color:${u.waterPaid ? "var(--ok)" : "var(--warn)"};font-weight:600;border:1px solid ${u.waterPaid ? "var(--ok)" : "var(--warn)"}">W: ${u.waterPaid ? "✓" : "✗"}${u.waterAmt ? " " + fmt(u.waterAmt) : ""}</span>
+          <span style="font-size:12px;padding:2px 8px;border-radius:999px;background:${u.maintPaid ? "var(--ok-soft)" : "var(--warn-soft)"};color:${u.maintPaid ? "var(--ok)" : "var(--warn)"};font-weight:600;border:1px solid ${u.maintPaid ? "var(--ok)" : "var(--warn)"}">M: ${u.maintPaid ? "✓" : "✗"}${u.maintAmt ? " " + fmt(u.maintAmt, 0) : ""}</span>
+          <span class="muted small" style="margin-left:auto">Outstanding: LKR ${fmt(outstanding)}</span>
+        </div>`;
+      }).join("");
+    }
+
+    const nonZero = EXPENSE_GROUPS.filter(g => ov.maint.byGroup[g] > 0);
+    if (nonZero.length) {
+      $("overviewExpenses").innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${nonZero.map(g => `<div style="padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg)">
+          <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em">${esc(g)}</div>
+          <div style="font-family:var(--mono);font-size:14px;font-weight:700;margin-top:2px">${fmt(ov.maint.byGroup[g])}</div>
+        </div>`).join("")}
+      </div>`;
+      $("overviewExpCard").style.display = "";
+    } else {
+      $("overviewExpCard").style.display = "none";
+    }
+  }
+
+  // ---- Water tab ----
+  function renderWater() {
     $("month").value = cur.month;
     for (const id of ["month", "billUnits", "billAmount", "fixedCharge"]) $(id).disabled = !editor;
     for (const id of ["billUnits", "billAmount", "fixedCharge"]) $(id).value = cur[id] ?? "";
-
     $("rows").innerHTML = housesOf(cur).map(h => {
       const v = k => esc(cur.readings?.[h]?.[k] ?? ""), dis = editor ? "" : "disabled";
       return `<tr data-house="${esc(h)}"><td><span class="house-badge">${esc(h)}</span></td>
         <td data-l="Previous"><input class="num" data-k="prev" inputmode="numeric" maxlength="4" value="${v("prev")}" ${dis}></td>
         <td data-l="Current"><input class="num" data-k="curr" inputmode="numeric" maxlength="4" value="${v("curr")}" ${dis}></td>
-        <td class="m" data-l="Own units" data-o="units"></td><td class="m" data-l="Common share" data-o="common"></td>
-        <td class="m" data-l="Billable units" data-o="billable"></td><td class="m" data-l="Amount (LKR)" data-o="amount"></td></tr>`;
+        <td class="m" data-l="Own units" data-o="units"></td>
+        <td class="m" data-l="Common share" data-o="common"></td>
+        <td class="m" data-l="Billable units" data-o="billable"></td>
+        <td class="m" data-l="Amount (LKR)" data-o="amount"></td></tr>`;
     }).join("");
     renderResults();
   }
@@ -288,8 +535,10 @@
       tr.querySelector('[data-o="amount"]').textContent = r.ok ? fmt(row.amount) : "—";
     });
     const total = r.ok ? r.rows.reduce((s, x) => s + x.amount, 0) : NaN;
-    $("totals").innerHTML = `<td><span class="house-badge" style="background:var(--accent);color:#fff">Total</span></td><td></td><td></td><td class="m" data-l="House units">${fmtU(r.houseTotal)}</td>
-      <td class="m" data-l="Common units">${r.ok ? fmtU(r.common) : "—"}</td><td class="m" data-l="Billable units">${r.ok ? fmtU(r.billUnits) : "—"}</td>
+    $("totals").innerHTML = `<td><span class="house-badge" style="background:var(--accent);color:#fff">Total</span></td><td></td><td></td>
+      <td class="m" data-l="House units">${fmtU(r.houseTotal)}</td>
+      <td class="m" data-l="Common units">${r.ok ? fmtU(r.common) : "—"}</td>
+      <td class="m" data-l="Billable units">${r.ok ? fmtU(r.billUnits) : "—"}</td>
       <td class="m" data-l="Total (LKR)">${r.ok ? fmt(total) : "—"}</td>`;
     $("msgs").innerHTML = (editor ? r.errors.map(e => `<div class="msg bad">${esc(e)}</div>`).join("") : "")
       + r.warnings.map(w => `<div class="msg ${w.t}">${esc(w.s)}</div>`).join("")
@@ -297,23 +546,132 @@
     $("stats").innerHTML = [
       ["Bill units", fmtU(r.billUnits), ""], ["House meters total", fmtU(r.houseTotal), ""],
       ["Common units", r.ok ? fmtU(r.common) : "—", r.ok ? `${fmt(r.common / r.billUnits * 100, 1)}% of bill` : ""],
-      ["Common per house", r.ok ? fmtU(r.commonEach) : "—", "units"], ["Rate per unit", r.ok ? fmt(r.rate) : "—", "LKR"],
-    ].map(([k, v, h]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="h">${h}</div></div>`).join("");
+      ["Common per house", r.ok ? fmtU(r.commonEach) : "—", "units"],
+      ["Rate per unit", r.ok ? fmt(r.rate) : "—", "LKR"],
+    ].map(([k, v, hh]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="h">${hh}</div></div>`).join("");
     $("copy").disabled = !r.ok;
     $("del").disabled = !saved(cur.month);
   }
 
+  // ---- Maintenance tab ----
+  function renderMaintenance() {
+    const water = compute(cur);
+    const mt = cur.maint || {};
+    const r = computeMaint(cur);
+    const houses = housesOf(cur);
+    const isEd = !!editor;
+
+    $("maintFee").value = mt.feePerHouse ?? DEFAULT_FEE;
+    $("maintFee").disabled = !isEd;
+    $("maintOpening").value = mt.openingBalance ?? 0;
+    $("maintOpening").disabled = !isEd;
+
+    const pill = (paid, label) => {
+      const c = paid ? "var(--ok)" : "var(--warn)";
+      const bg = paid ? "var(--ok-soft)" : "var(--warn-soft)";
+      return `style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:4px;border:1px solid ${c};background:${bg};color:${c}"`;
+    };
+
+    $("maintRows").innerHTML = houses.map(h => {
+      const wPaid = mt.waterPaid?.[h] ?? false;
+      const mPaid = mt.maintPaid?.[h] ?? mt.paid?.[h] ?? false;
+      const waterRow = water.ok ? water.rows.find(x => x.house === h) : null;
+      const waterAmt = waterRow ? waterRow.amount : null;
+      const received = (wPaid && waterAmt != null ? waterAmt : 0) + (mPaid && Number.isFinite(r.fee) ? r.fee : 0);
+
+      const wEl = isEd
+        ? `<button class="pay-toggle" data-house="${esc(h)}" data-type="water" ${pill(wPaid)}>${wPaid ? "✓" : "✗"} W</button>`
+        : `<span ${pill(wPaid)}>${wPaid ? "✓" : "✗"} W</span>`;
+      const mEl = isEd
+        ? `<button class="pay-toggle" data-house="${esc(h)}" data-type="maint" ${pill(mPaid)}>${mPaid ? "✓" : "✗"} M</button>`
+        : `<span ${pill(mPaid)}>${mPaid ? "✓" : "✗"} M</span>`;
+
+      return `<tr>
+        <td data-l="House"><span class="house-badge">${esc(h)}</span></td>
+        <td data-l="Water bill" style="text-align:left">${waterAmt != null ? `<span class="m">${fmt(waterAmt)}</span>` : `<span class="muted small">pending</span>`} ${wEl}</td>
+        <td data-l="Maintenance" style="text-align:left"><span class="m">${Number.isFinite(r.fee) ? fmt(r.fee) : "—"}</span> ${mEl}</td>
+        <td data-l="Received (LKR)" class="m" data-o="amount">${received > 0 ? fmt(received) : "—"}</td>
+      </tr>`;
+    }).join("");
+
+    const totalReceived = houses.reduce((s, h) => {
+      const wPaid = mt.waterPaid?.[h] ?? false;
+      const mPaid = mt.maintPaid?.[h] ?? mt.paid?.[h] ?? false;
+      const waterRow = water.ok ? water.rows.find(x => x.house === h) : null;
+      return s + (wPaid && waterRow ? waterRow.amount : 0) + (mPaid && Number.isFinite(r.fee) ? r.fee : 0);
+    }, 0);
+
+    $("maintTotals").innerHTML = `<td><span class="house-badge" style="background:var(--accent);color:#fff">Total</span></td>
+      <td style="text-align:left"><span class="muted small">${houses.filter(h => mt.waterPaid?.[h]).length} of ${houses.length} water paid</span></td>
+      <td style="text-align:left"><span class="muted small">${r.paidHouses.length} of ${houses.length} maint paid</span></td>
+      <td class="m">${fmt(totalReceived)}</td>`;
+
+    $("expGroup").innerHTML = EXPENSE_GROUPS.map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join("");
+
+    const expenses = mt.expenses || [];
+    $("expEmpty").textContent = expenses.length ? "" : "No expenses recorded yet.";
+    $("expRows").innerHTML = expenses.map(e => `<tr>
+      <td data-l="Date" class="m">${esc(e.date || "")}</td>
+      <td data-l="Description" style="text-align:left;white-space:normal">${esc(e.desc || "")}</td>
+      <td data-l="Group">${esc(e.group || "")}</td>
+      <td data-l="Amount (LKR)" class="m" data-o="amount">${fmt(num(e.amount))}</td>
+      <td class="editor-only" style="text-align:center"><button class="link danger exp-del" data-id="${esc(e.id)}" title="Delete">✕</button></td>
+    </tr>`).join("");
+
+    const closingColor = r.closing < 0 ? "var(--bad)" : "var(--ok)";
+    $("maintStats").innerHTML = [
+      ["Opening balance", fmt(r.opening), "LKR"],
+      ["+ Collected", fmt(r.income), `${r.paidHouses.length} of ${houses.length} houses`],
+      ["− Expenses", fmt(r.totalExpenses), "LKR"],
+      ["= Closing balance", `<span style="color:${closingColor};font-weight:700">${fmt(r.closing)}</span>`, r.closing < 0 ? "⚠ deficit" : "LKR"],
+    ].map(([k, v, hh]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="h">${hh}</div></div>`).join("");
+
+    const nonZero = EXPENSE_GROUPS.filter(g => r.byGroup[g] > 0);
+    $("expGroupStats").innerHTML = nonZero.length
+      ? `<div style="margin-top:12px"><div class="muted small" style="margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;font-weight:600">Expenses by group</div>
+         <div style="display:flex;flex-wrap:wrap;gap:8px">${nonZero.map(g =>
+           `<div style="padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg)">
+             <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em">${esc(g)}</div>
+             <div style="font-family:var(--mono);font-size:14px;font-weight:700;margin-top:2px">${fmt(r.byGroup[g])}</div>
+           </div>`).join("")}</div></div>`
+      : "";
+  }
+
+  // ---- Other Transactions tab ----
+  function renderOther() {
+    const r = computeOther(cur);
+    $("otherEmpty").textContent = r.txns.length ? "" : "No transactions recorded yet.";
+    $("otherRows").innerHTML = r.txns.map(t => {
+      const isInc = t.type === "income";
+      const typeHtml = `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:${isInc ? "var(--ok-soft)" : "var(--bad-soft)"};color:${isInc ? "var(--ok)" : "var(--bad)"}">${isInc ? "Income" : "Expense"}</span>`;
+      return `<tr>
+        <td data-l="Date" class="m">${esc(t.date || "")}</td>
+        <td data-l="Description" style="text-align:left;white-space:normal">${esc(t.desc || "")}</td>
+        <td data-l="Type" style="text-align:left">${typeHtml}</td>
+        <td data-l="Amount (LKR)" class="m" data-o="amount">${fmt(t.amount)}</td>
+        <td class="editor-only" style="text-align:center"><button class="link danger other-del" data-id="${esc(t.id)}" title="Delete">✕</button></td>
+      </tr>`;
+    }).join("");
+    const net = r.income - r.expenses;
+    $("otherStats").innerHTML = [
+      ["Total income", fmt(r.income), "LKR"],
+      ["Total expenses", fmt(r.expenses), "LKR"],
+      ["Net", `<span style="color:${net >= 0 ? "var(--ok)" : "var(--bad)"};font-weight:700">${fmt(net)}</span>`, "LKR"],
+    ].map(([k, v, hh]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="h">${hh}</div></div>`).join("");
+  }
+
+  // ---- Versions ----
   async function renderVersions() {
     if (!editor) return;
     try {
       const { versions } = await api("?history=1");
       $("versions").innerHTML = versions.length ? versions.map(v => `<li><div><b>Before: ${esc(v.note || "a save")}</b>
-        <div class="muted small">Change made by ${esc(v.by)} · ${esc(fmtTime(v.at))}</div></div>
+        <div class="muted small">By ${esc(v.by)} · ${esc(fmtTime(v.at))}</div></div>
         <button class="link" data-restore="${esc(v.id)}">Restore</button></li>`).join("") : `<li class="muted">No versions yet.</li>`;
     } catch (e) { $("versions").innerHTML = `<li class="muted">${esc(e.message)}</li>`; }
   }
 
-  // ---- Save whole document ----
+  // ---- Persist ----
   async function persist(months, note) {
     const data = { houses: doc.houses?.length ? doc.houses : HOUSES, months: months.sort((a, b) => a.month.localeCompare(b.month)) };
     doc = await api("", { method: "PUT", body: JSON.stringify({ data, note }) });
@@ -321,19 +679,14 @@
   }
 
   // ---- Events ----
-  $("rows").addEventListener("input", e => {
-    const inp = e.target.closest("input"); if (!inp || !editor) return;
-    inp.value = inp.value.replace(/\D/g, "").slice(0, 4);
-    const h = inp.closest("tr").dataset.house;
-    ((cur.readings ||= {})[h] ||= { prev: "", curr: "" })[inp.dataset.k] = inp.value;
-    renderResults();
+
+  // Tab bar
+  $("tabBar").addEventListener("click", e => {
+    const btn = e.target.closest(".tab-btn"); if (!btn) return;
+    switchTab(btn.dataset.tab);
   });
-  ["billUnits", "billAmount", "fixedCharge"].forEach(id => $(id).addEventListener("input", e => { cur[id] = e.target.value.trim(); renderResults(); }));
-  $("month").addEventListener("change", e => {
-    const v = e.target.value; if (!v) return;
-    cur = saved(v) ? clone(saved(v)) : { ...cur, month: v };
-    render();
-  });
+
+  // Month selector
   $("newMonth").onclick = () => {
     let m = doc.months.length ? nextMonth(doc.months[doc.months.length - 1].month) : thisMonth();
     while (saved(m)) m = nextMonth(m);
@@ -341,42 +694,129 @@
   };
   $("save").onclick = async () => {
     const r = compute(cur);
-    if (!r.ok) return toast("Fix the highlighted errors first");
+    if (!r.ok) { switchTab("water"); return toast("Fix the water bill errors first"); }
     $("save").disabled = true;
     try {
       const month = { ...clone(cur), houses: housesOf(cur), amounts: Object.fromEntries(r.rows.map(x => [x.house, x.amount])) };
       await persist([...doc.months.filter(m => m.month !== cur.month), month], `${saved(cur.month) ? "Edited" : "Added"} ${monthLabel(cur.month)}`);
       cur = clone(saved(month.month)); render(); toast(`Saved ${monthLabel(cur.month)}`);
-    } catch (e) { toast("Couldn’t save: " + e.message); }
+    } catch (e) { toast("Couldn't save: " + e.message); }
     finally { $("save").disabled = false; }
   };
+
+  // Water tab inputs
+  $("rows").addEventListener("input", e => {
+    const inp = e.target.closest("input"); if (!inp || !editor) return;
+    inp.value = inp.value.replace(/\D/g, "").slice(0, 4);
+    const h = inp.closest("tr").dataset.house;
+    ((cur.readings ||= {})[h] ||= { prev: "", curr: "" })[inp.dataset.k] = inp.value;
+    if (curTab === "water") renderResults();
+  });
+  ["billUnits", "billAmount", "fixedCharge"].forEach(id => $(id).addEventListener("input", e => {
+    cur[id] = e.target.value.trim();
+    if (curTab === "water") renderResults();
+  }));
+  $("month").addEventListener("change", e => {
+    const v = e.target.value; if (!v) return;
+    cur = saved(v) ? clone(saved(v)) : { ...cur, month: v };
+    render();
+  });
   $("del").onclick = async () => {
     const b = $("del");
     if (b.dataset.armed !== "1") { b.dataset.armed = "1"; b.textContent = "Tap again to delete"; setTimeout(() => { b.dataset.armed = ""; b.textContent = "Delete this month"; }, 3000); return; }
     b.dataset.armed = ""; b.textContent = "Delete this month";
     const label = monthLabel(cur.month);
-    try { await persist(doc.months.filter(m => m.month !== cur.month), `Deleted ${label}`); selectLatest(); render(); toast(`Deleted ${label} — restore it from Versions`); }
-    catch (e) { toast("Couldn’t delete: " + e.message); }
+    try { await persist(doc.months.filter(m => m.month !== cur.month), `Deleted ${label}`); selectLatest(); render(); toast(`Deleted ${label} — restore from Versions`); }
+    catch (e) { toast("Couldn't delete: " + e.message); }
   };
+  $("copy").onclick = async () => {
+    const r = compute(cur); if (!r.ok) return;
+    const mt = cur.maint || {};
+    const fee = Number.isFinite(num(mt.feePerHouse ?? DEFAULT_FEE)) ? num(mt.feePerHouse ?? DEFAULT_FEE) : DEFAULT_FEE;
+    const lines = [
+      `*Wel House Residency – ${monthLabel(cur.month)}*`,
+      `Water bill: ${fmtU(r.billUnits)} units · LKR ${fmt(r.billAmount)}`,
+      `Common: ${fmtU(r.common)} units · LKR ${fmt(r.rate)}/unit`,
+      `Maintenance fee: LKR ${fmt(fee, 0)} per house`, "",
+      ...r.rows.map(x => `${x.house}: Water ${fmt(x.amount)} + Maint ${fmt(fee, 0)} = *LKR ${fmt(x.amount + fee)}*`),
+      "", location.origin,
+    ];
+    try { await navigator.clipboard.writeText(lines.join("\n")); toast("Copied"); } catch (_) { toast("Clipboard blocked"); }
+  };
+
+  // Maintenance fee / opening balance
+  $("maintFee").addEventListener("input", e => {
+    if (!editor) return;
+    (cur.maint ||= blankMaint()).feePerHouse = num(e.target.value) || DEFAULT_FEE;
+    if (curTab === "maintenance") renderMaintenance();
+  });
+  $("maintOpening").addEventListener("input", e => {
+    if (!editor) return;
+    (cur.maint ||= blankMaint()).openingBalance = num(e.target.value) || 0;
+    if (curTab === "maintenance") renderMaintenance();
+  });
+
+  // Payment toggles
+  $("maintCard").addEventListener("click", e => {
+    const btn = e.target.closest(".pay-toggle"); if (!btn || !editor) return;
+    const h = btn.dataset.house, t = btn.dataset.type;
+    const mt = (cur.maint ||= blankMaint());
+    if (t === "water") mt.waterPaid[h] = !mt.waterPaid[h];
+    else mt.maintPaid[h] = !mt.maintPaid[h];
+    renderMaintenance();
+  });
+
+  // Add expense
+  $("addExp").onclick = () => {
+    if (!editor) return;
+    const date = $("expDate").value.trim(), desc = $("expDesc").value.trim();
+    const group = $("expGroup").value, amount = num($("expAmt").value);
+    if (!date) return toast("Enter a date");
+    if (!desc) return toast("Enter a description");
+    if (!Number.isFinite(amount) || amount <= 0) return toast("Enter a valid amount");
+    (cur.maint ||= blankMaint()).expenses.push({ id: makeExpenseId(), date, desc, group, amount });
+    $("expDesc").value = ""; $("expAmt").value = "";
+    renderMaintenance();
+  };
+  $("expCard").addEventListener("click", e => {
+    const btn = e.target.closest(".exp-del"); if (!btn || !editor) return;
+    if (!cur.maint) return;
+    cur.maint.expenses = cur.maint.expenses.filter(x => x.id !== btn.dataset.id);
+    renderMaintenance();
+  });
+
+  // Add other transaction
+  $("addOther").onclick = () => {
+    if (!editor) return;
+    const date = $("otherDate").value.trim(), desc = $("otherDesc").value.trim();
+    const type = $("otherType").value, amount = num($("otherAmt").value);
+    if (!date) return toast("Enter a date");
+    if (!desc) return toast("Enter a description");
+    if (!Number.isFinite(amount) || amount <= 0) return toast("Enter a valid amount");
+    (cur.other ||= blankOther()).transactions.push({ id: makeOtherId(), date, desc, type, amount });
+    $("otherDesc").value = ""; $("otherAmt").value = "";
+    renderOther();
+  };
+  $("otherCard").addEventListener("click", e => {
+    const btn = e.target.closest(".other-del"); if (!btn || !editor) return;
+    if (!cur.other) return;
+    cur.other.transactions = cur.other.transactions.filter(x => x.id !== btn.dataset.id);
+    renderOther();
+  });
+
+  // Versions restore
   $("versions").addEventListener("click", async e => {
     const id = e.target.closest("[data-restore]")?.dataset.restore; if (!id) return;
     try { doc = await api("?restore=" + encodeURIComponent(id), { method: "POST" }); selectLatest(); render(); renderVersions(); toast("Version restored"); }
-    catch (err) { toast("Couldn’t restore: " + err.message); }
+    catch (err) { toast("Couldn't restore: " + err.message); }
   });
-  $("copy").onclick = async () => {
-    const r = compute(cur); if (!r.ok) return;
-    const lines = [`*Water bill – ${monthLabel(cur.month)}*`, `Bill: ${fmtU(r.billUnits)} units · LKR ${fmt(r.billAmount)}`,
-      `Common: ${fmtU(r.common)} units (${fmtU(r.commonEach)}/house) · LKR ${fmt(r.rate)}/unit`, "",
-      ...r.rows.map(x => `${x.house}: ${x.prev}→${x.curr} = ${fmtU(x.units)}u → *LKR ${fmt(x.amount)}*`), "", location.origin];
-    try { await navigator.clipboard.writeText(lines.join("\n")); toast("Copied"); } catch (_) { toast("Clipboard blocked"); }
-  };
 
   let tt;
   function toast(s) { const t = $("toast"); t.textContent = s; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 2800); }
 
   // ---- Boot ----
   (async () => {
-    try { doc = await api(); } catch (e) { $("hist").innerHTML = `<span class="msg bad">Couldn’t load: ${esc(e.message)}</span>`; return; }
+    try { doc = await api(); } catch (e) { $("hist").innerHTML = `<span class="msg bad">Couldn't load: ${esc(e.message)}</span>`; return; }
     if (editKey) {
       try { editor = (await api("?check=1")).name; } catch (_) { toast("This edit link is no longer valid — view only"); }
     }
