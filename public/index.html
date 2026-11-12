@@ -438,6 +438,20 @@
   }
   .month-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
 
+  /* ── Keyboard focus (visible for non-pointer nav) ── */
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+  input:focus-visible, select:focus-visible { outline: none; }
+
+  /* ── Form section (editor add-record areas) ── */
+  .form-section { background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px; margin-bottom: 16px; }
+
+  /* ── Empty state ── */
+  .empty-state { padding: 20px 0 8px; color: var(--muted); font-size: 14px; }
+
+  /* ── Month chip list: hide scrollbar globally (shown as scroll on mobile) ── */
+  .hist { scrollbar-width: none; }
+  .hist::-webkit-scrollbar { display: none; }
+
   /* ── Responsive ── */
   @media (max-width: 680px) {
     .wrap { padding: 16px 16px 80px; }
@@ -505,6 +519,8 @@
     .collect-amount { font-size: 17px; }
     .payment-outstanding { margin-left: 0; width: 100%; padding-top: 2px; }
     .dash-meta { text-align: left; }
+    .hist { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+    .collect-grid { grid-template-columns: repeat(2, 1fr); }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -536,15 +552,15 @@
   </div>
 
   <!-- Tab bar -->
-  <div class="tabs" id="tabBar">
-    <button class="tab-btn active" data-tab="overview">Overview</button>
-    <button class="tab-btn" data-tab="water">Water</button>
-    <button class="tab-btn" data-tab="maintenance">Maintenance</button>
-    <button class="tab-btn" data-tab="other">Other</button>
+  <div class="tabs" id="tabBar" role="tablist" aria-label="Application sections">
+    <button class="tab-btn active" data-tab="overview"     role="tab" id="tbtn-overview"     aria-selected="true"  aria-controls="tab-overview">Overview</button>
+    <button class="tab-btn"        data-tab="water"        role="tab" id="tbtn-water"        aria-selected="false" aria-controls="tab-water">Water</button>
+    <button class="tab-btn"        data-tab="maintenance"  role="tab" id="tbtn-maintenance"  aria-selected="false" aria-controls="tab-maintenance">Maintenance</button>
+    <button class="tab-btn"        data-tab="other"        role="tab" id="tbtn-other"        aria-selected="false" aria-controls="tab-other">Other</button>
   </div>
 
   <!-- OVERVIEW TAB -->
-  <div class="tab-panel" id="tab-overview">
+  <div class="tab-panel" id="tab-overview" role="tabpanel" aria-labelledby="tbtn-overview">
     <!-- Balance hero -->
     <div class="card dash-hero">
       <div>
@@ -578,7 +594,7 @@
   </div>
 
   <!-- WATER TAB -->
-  <div class="tab-panel" id="tab-water" hidden>
+  <div class="tab-panel" id="tab-water" role="tabpanel" aria-labelledby="tbtn-water" hidden>
     <div class="card">
       <h2>Water board bill</h2>
       <div class="grid">
@@ -592,7 +608,15 @@
       <h2>Meter readings &amp; split</h2>
       <div class="tablewrap">
         <table>
-          <thead><tr><th>House</th><th>Previous</th><th>Current</th><th>Own units</th><th>Common share</th><th>Billable units</th><th class="th-amount">Amount (LKR)</th></tr></thead>
+          <thead><tr>
+            <th scope="col">House</th>
+            <th scope="col">Previous</th>
+            <th scope="col">Current</th>
+            <th scope="col">Own units</th>
+            <th scope="col">Common share</th>
+            <th scope="col">Billable units</th>
+            <th scope="col" class="th-amount">Amount (LKR)</th>
+          </tr></thead>
           <tbody id="rows"></tbody>
           <tfoot><tr id="totals"></tr></tfoot>
         </table>
@@ -603,27 +627,27 @@
       <h2>Summary</h2>
       <div class="stats" id="stats"></div>
       <div class="btns" style="margin-top:14px">
-        <button id="copy">Copy summary (WhatsApp)</button>
-        <button id="del" class="danger editor-only">Delete this month</button>
+        <button id="copy" aria-label="Copy billing summary to clipboard for WhatsApp">Copy summary (WhatsApp)</button>
+        <button id="del" class="danger editor-only" aria-label="Delete this month's data">Delete this month</button>
       </div>
     </div>
   </div>
 
   <!-- MAINTENANCE TAB -->
-  <div class="tab-panel" id="tab-maintenance" hidden>
+  <div class="tab-panel" id="tab-maintenance" role="tabpanel" aria-labelledby="tbtn-maintenance" hidden>
     <div class="card" id="maintCard">
       <h2>Maintenance fee &amp; collection</h2>
-      <div class="grid editor-only" style="margin-bottom:14px">
+      <div class="form-section grid editor-only">
         <div><label for="maintFee">Fee per house (LKR)</label><input id="maintFee" class="num" inputmode="decimal"></div>
         <div><label for="maintOpening">Opening balance (LKR)</label><input id="maintOpening" class="num" inputmode="decimal"></div>
       </div>
       <div class="tablewrap">
         <table id="maintTable">
           <thead><tr>
-            <th>House</th>
-            <th style="text-align:left">Water bill</th>
-            <th style="text-align:left">Maintenance</th>
-            <th class="th-amount">Received</th>
+            <th scope="col">House</th>
+            <th scope="col" style="text-align:left">Water bill</th>
+            <th scope="col" style="text-align:left">Maintenance</th>
+            <th scope="col" class="th-amount">Received</th>
           </tr></thead>
           <tbody id="maintRows"></tbody>
           <tfoot><tr id="maintTotals"></tr></tfoot>
@@ -632,7 +656,7 @@
     </div>
     <div class="card" id="expCard">
       <h2>Expenses</h2>
-      <div class="editor-only" style="margin-bottom:14px">
+      <div class="form-section editor-only">
         <div class="grid">
           <div><label for="expDate">Date</label><input id="expDate" type="date"></div>
           <div><label for="expGroup">Group</label><select id="expGroup" class="sel"></select></div>
@@ -643,21 +667,27 @@
       </div>
       <div class="tablewrap">
         <table id="expTable">
-          <thead><tr><th>Date</th><th style="text-align:left">Description</th><th>Group</th><th class="th-amount">Amount (LKR)</th><th class="editor-only" style="width:32px"></th></tr></thead>
+          <thead><tr>
+            <th scope="col">Date</th>
+            <th scope="col" style="text-align:left">Description</th>
+            <th scope="col">Group</th>
+            <th scope="col" class="th-amount">Amount (LKR)</th>
+            <th scope="col" class="editor-only" style="width:32px"></th>
+          </tr></thead>
           <tbody id="expRows"></tbody>
         </table>
       </div>
-      <div id="expEmpty" class="muted small" style="margin-top:8px"></div>
+      <div id="expEmpty" class="empty-state"></div>
       <div class="stats" id="maintStats" style="margin-top:16px"></div>
       <div id="expGroupStats"></div>
     </div>
   </div>
 
   <!-- OTHER TRANSACTIONS TAB -->
-  <div class="tab-panel" id="tab-other" hidden>
+  <div class="tab-panel" id="tab-other" role="tabpanel" aria-labelledby="tbtn-other" hidden>
     <div class="card" id="otherCard">
       <h2>Other Transactions</h2>
-      <div class="editor-only" style="margin-bottom:14px">
+      <div class="form-section editor-only">
         <div class="grid">
           <div><label for="otherDate">Date</label><input id="otherDate" type="date"></div>
           <div><label for="otherType">Type</label>
@@ -673,11 +703,17 @@
       </div>
       <div class="tablewrap">
         <table id="otherTable">
-          <thead><tr><th>Date</th><th style="text-align:left">Description</th><th style="text-align:left">Type</th><th class="th-amount">Amount (LKR)</th><th class="editor-only" style="width:32px"></th></tr></thead>
+          <thead><tr>
+            <th scope="col">Date</th>
+            <th scope="col" style="text-align:left">Description</th>
+            <th scope="col" style="text-align:left">Type</th>
+            <th scope="col" class="th-amount">Amount (LKR)</th>
+            <th scope="col" class="editor-only" style="width:32px"></th>
+          </tr></thead>
           <tbody id="otherRows"></tbody>
         </table>
       </div>
-      <div id="otherEmpty" class="muted small" style="margin-top:8px"></div>
+      <div id="otherEmpty" class="empty-state"></div>
       <div class="stats" id="otherStats" style="margin-top:16px"></div>
     </div>
   </div>
@@ -847,7 +883,10 @@
   // ---- Tab switching ----
   function switchTab(t) {
     curTab = t;
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === t));
+    document.querySelectorAll(".tab-btn").forEach(b => {
+      b.classList.toggle("active", b.dataset.tab === t);
+      b.setAttribute("aria-selected", b.dataset.tab === t ? "true" : "false");
+    });
     document.querySelectorAll(".tab-panel").forEach(p => { p.hidden = p.id !== `tab-${t}`; });
     renderTab(t);
   }
@@ -1019,10 +1058,10 @@
       const received = (wPaid && waterAmt != null ? waterAmt : 0) + (mPaid && Number.isFinite(r.fee) ? r.fee : 0);
 
       const wEl = isEd
-        ? `<button class="pay-toggle ${wPaid ? "paid" : "unpaid"}" data-house="${esc(h)}" data-type="water">Water ${wPaid ? "✓" : "✗"}</button>`
+        ? `<button class="pay-toggle ${wPaid ? "paid" : "unpaid"}" data-house="${esc(h)}" data-type="water" aria-label="${wPaid ? "Mark water unpaid" : "Mark water paid"} for ${esc(h)}">Water ${wPaid ? "✓" : "✗"}</button>`
         : `<span class="pay-pill ${wPaid ? "paid" : "unpaid"}">Water ${wPaid ? "✓" : "✗"}</span>`;
       const mEl = isEd
-        ? `<button class="pay-toggle ${mPaid ? "paid" : "unpaid"}" data-house="${esc(h)}" data-type="maint">Maint ${mPaid ? "✓" : "✗"}</button>`
+        ? `<button class="pay-toggle ${mPaid ? "paid" : "unpaid"}" data-house="${esc(h)}" data-type="maint" aria-label="${mPaid ? "Mark maintenance unpaid" : "Mark maintenance paid"} for ${esc(h)}">Maint ${mPaid ? "✓" : "✗"}</button>`
         : `<span class="pay-pill ${mPaid ? "paid" : "unpaid"}">Maint ${mPaid ? "✓" : "✗"}</span>`;
 
       return `<tr>
@@ -1054,7 +1093,7 @@
       <td data-l="Description" style="text-align:left;white-space:normal">${esc(e.desc || "")}</td>
       <td data-l="Group">${esc(e.group || "")}</td>
       <td data-l="Amount (LKR)" class="m" data-o="amount">LKR ${fmt(num(e.amount))}</td>
-      <td class="editor-only" style="text-align:center"><button class="link danger exp-del" data-id="${esc(e.id)}" title="Delete">✕</button></td>
+      <td class="editor-only" style="text-align:center"><button class="link danger exp-del" data-id="${esc(e.id)}" aria-label="Delete expense: ${esc(e.desc)}">✕</button></td>
     </tr>`).join("");
 
     const closingColor = r.closing < 0 ? "var(--bad)" : "var(--ok)";
@@ -1087,7 +1126,7 @@
         <td data-l="Description" style="text-align:left;white-space:normal">${esc(t.desc || "")}</td>
         <td data-l="Type" style="text-align:left"><span class="txn-pill ${isInc ? "income" : "expense"}">${isInc ? "Income" : "Expense"}</span></td>
         <td data-l="Amount (LKR)" class="m" data-o="amount">LKR ${fmt(t.amount)}</td>
-        <td class="editor-only" style="text-align:center"><button class="link danger other-del" data-id="${esc(t.id)}" title="Delete">✕</button></td>
+        <td class="editor-only" style="text-align:center"><button class="link danger other-del" data-id="${esc(t.id)}" aria-label="Delete transaction: ${esc(t.desc)}">✕</button></td>
       </tr>`;
     }).join("");
     const net = r.income - r.expenses;
