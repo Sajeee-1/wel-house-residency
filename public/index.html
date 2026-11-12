@@ -580,7 +580,10 @@
     </div>
     <!-- Balance sheet breakdown -->
     <div class="card">
-      <h2>Balance sheet</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+        <h2 style="margin:0">Balance sheet</h2>
+        <button id="exportSummary" title="Export full monthly summary as a printable PDF">⬇ Export monthly summary</button>
+      </div>
       <div class="stats" id="overviewBalance"></div>
     </div>
     <!-- Quick access navigation -->
@@ -1062,6 +1065,271 @@
   }
 
   // ---- Maintenance tab ----
+  function exportMonthlySummary() {
+    const ov    = computeOverview(cur);
+    const water = ov.water;
+    const mt    = cur.maint || {};
+    const r     = ov.maint;
+    const other = ov.other;
+    const houses = housesOf(cur);
+    const label  = monthLabel(cur.month);
+    const fmtP   = n => Number.isFinite(n) ? n.toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";
+    const printed = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+    // ── Water rows ──
+    const waterRowsHtml = water.ok
+      ? `<table>
+          <thead><tr>
+            <th style="text-align:left">House</th>
+            <th>Prev</th><th>Curr</th><th>Own Units</th><th>Common Share</th><th>Billable</th><th>Amount (LKR)</th>
+          </tr></thead>
+          <tbody>
+            ${water.rows.map(row => `<tr>
+              <td style="text-align:left"><strong>${row.house}</strong></td>
+              <td>${Number.isFinite(row.prev) ? row.prev : "—"}</td>
+              <td>${Number.isFinite(row.curr) ? row.curr : "—"}</td>
+              <td>${Number.isFinite(row.units) ? row.units : "—"}${row.rolled ? " <em style='font-size:8pt;color:#986000'>(rollover)</em>" : ""}${row.suspicious ? " <em style='font-size:8pt;color:#986000'>(check)</em>" : ""}</td>
+              <td>${Number.isFinite(row.commonShare) ? (Math.round(row.commonShare * 100) / 100).toLocaleString("en-LK", { maximumFractionDigits: 2 }) : "—"}</td>
+              <td>${Number.isFinite(row.billable) ? (Math.round(row.billable * 100) / 100).toLocaleString("en-LK", { maximumFractionDigits: 2 }) : "—"}</td>
+              <td><strong>${fmtP(row.amount)}</strong></td>
+            </tr>`).join("")}
+          </tbody>
+          <tfoot><tr>
+            <td style="text-align:left"><strong>Total</strong></td>
+            <td></td><td></td>
+            <td>${(Math.round(water.houseTotal * 100) / 100).toLocaleString("en-LK", { maximumFractionDigits: 2 })}</td>
+            <td></td>
+            <td>${(Math.round(water.billUnits * 100) / 100).toLocaleString("en-LK", { maximumFractionDigits: 2 })}</td>
+            <td><strong>${fmtP(water.billAmount)}</strong></td>
+          </tr></tfoot>
+        </table>`
+      : `<p style="color:#986000;font-size:9.5pt;padding:4mm 0">Water bill data incomplete — meter readings or bill totals not entered.</p>`;
+
+    // ── Maintenance rows ──
+    const maintRowsHtml = `<table>
+      <thead><tr>
+        <th style="text-align:left">House</th>
+        <th>Water (LKR)</th>
+        <th>Maintenance (LKR)</th>
+        <th>Total (LKR)</th>
+        <th>Water</th>
+        <th>Maintenance</th>
+      </tr></thead>
+      <tbody>
+        ${houses.map(h => {
+          const waterRow = water.ok ? water.rows.find(x => x.house === h) : null;
+          const wAmt = waterRow ? waterRow.amount : null;
+          const mAmt = Number.isFinite(r.fee) ? r.fee : null;
+          const wPaid = mt.waterPaid?.[h] ?? false;
+          const mPaid = mt.maintPaid?.[h] ?? mt.paid?.[h] ?? false;
+          const total = (wPaid && wAmt != null ? wAmt : 0) + (mPaid && mAmt != null ? mAmt : 0);
+          return `<tr>
+            <td style="text-align:left"><strong>${h}</strong></td>
+            <td>${wAmt != null ? fmtP(wAmt) : "—"}</td>
+            <td>${mAmt != null ? fmtP(mAmt) : "—"}</td>
+            <td><strong>${total > 0 ? fmtP(total) : "—"}</strong></td>
+            <td><span class="badge ${wPaid ? "paid" : "unpaid"}">${wPaid ? "✓ Paid" : "✗ Unpaid"}</span></td>
+            <td><span class="badge ${mPaid ? "paid" : "unpaid"}">${mPaid ? "✓ Paid" : "✗ Unpaid"}</span></td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+      <tfoot><tr>
+        <td style="text-align:left"><strong>Paid</strong></td>
+        <td>${ov.waterPaidHouses.length} of ${houses.length} houses</td>
+        <td>${r.paidHouses.length} of ${houses.length} houses</td>
+        <td><strong>${fmtP(ov.waterCollected + r.income)}</strong></td>
+        <td colspan="2"></td>
+      </tr></tfoot>
+    </table>`;
+
+    // ── Expenses ──
+    const expHtml = r.expenses.length
+      ? `<table>
+          <thead><tr>
+            <th style="text-align:left">Date</th>
+            <th style="text-align:left">Description</th>
+            <th>Group</th>
+            <th>Amount (LKR)</th>
+          </tr></thead>
+          <tbody>
+            ${r.expenses.map(e => `<tr>
+              <td style="text-align:left;white-space:nowrap">${fmtDate(e.date)}</td>
+              <td style="text-align:left">${e.desc || ""}</td>
+              <td>${e.group || ""}</td>
+              <td><strong>${fmtP(e.amount)}</strong></td>
+            </tr>`).join("")}
+          </tbody>
+          <tfoot><tr>
+            <td colspan="3" style="text-align:right"><strong>Total expenses</strong></td>
+            <td><strong>${fmtP(r.totalExpenses)}</strong></td>
+          </tr></tfoot>
+        </table>
+        ${(() => { const nonZero = EXPENSE_GROUPS.filter(g => r.byGroup[g] > 0); return nonZero.length ? `<div style="display:flex;flex-wrap:wrap;gap:3mm;margin-top:3mm">${nonZero.map(g => `<div style="border:0.5pt solid #c8d4c8;border-radius:3px;padding:2mm 3mm;font-size:9pt"><strong>${g}</strong><br>LKR ${fmtP(r.byGroup[g])}</div>`).join("")}</div>` : ""; })()} `
+      : `<p style="color:#888;font-size:9.5pt;padding:3mm 0">No expenses recorded this month.</p>`;
+
+    // ── Other transactions ──
+    const otherHtml = other.txns.length
+      ? `<table>
+          <thead><tr>
+            <th style="text-align:left">Date</th>
+            <th style="text-align:left">Description</th>
+            <th>Type</th>
+            <th>Amount (LKR)</th>
+          </tr></thead>
+          <tbody>
+            ${other.txns.map(t => `<tr>
+              <td style="text-align:left;white-space:nowrap">${fmtDate(t.date)}</td>
+              <td style="text-align:left">${t.desc || ""}</td>
+              <td><span class="badge ${t.type === "income" ? "paid" : "unpaid"}">${t.type === "income" ? "Income" : "Expense"}</span></td>
+              <td><strong>${fmtP(t.amount)}</strong></td>
+            </tr>`).join("")}
+          </tbody>
+          <tfoot><tr>
+            <td colspan="3" style="text-align:right"><strong>Net</strong></td>
+            <td><strong style="color:${other.income - other.expenses >= 0 ? "#267443" : "#B42318"}">${fmtP(other.income - other.expenses)}</strong></td>
+          </tr></tfoot>
+        </table>`
+      : "";
+
+    // ── Closing balance colour ──
+    const closingClr = ov.closing < 0 ? "#B42318" : "#267443";
+
+    const html = `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<title>Monthly Summary \u2013 ${label}</title>
+<style>
+@page { size: A4 portrait; margin: 14mm 16mm; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, "Noto Sans", sans-serif; font-size: 10.5pt; color: #1a1a1a; }
+.hdr { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2.5pt solid #245C45; padding-bottom: 4mm; margin-bottom: 7mm; }
+.hdr h1 { font-size: 16pt; font-weight: 700; color: #245C45; }
+.hdr-right { text-align: right; color: #555; font-size: 10pt; line-height: 1.6; }
+.hdr-right strong { font-size: 13pt; color: #1a1a1a; display: block; }
+.sum-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3.5mm; margin-bottom: 8mm; }
+.sum-box { border: 1pt solid #c8d4c8; border-radius: 4px; padding: 3.5mm 4mm; text-align: center; }
+.sum-box.accent { background: #245C45; color: #fff; border-color: #245C45; }
+.sum-box .lbl { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #777; margin-bottom: 2mm; }
+.sum-box.accent .lbl { color: rgba(255,255,255,0.72); }
+.sum-box .val { font-size: 11.5pt; font-weight: 700; }
+.sum-box.accent .val { color: #fff; }
+.sum-box .sub { font-size: 8pt; color: #999; margin-top: 1.5mm; }
+.sum-box.accent .sub { color: rgba(255,255,255,0.6); }
+.section { margin-bottom: 8mm; }
+.sec-title { font-size: 11pt; font-weight: 700; color: #245C45; border-bottom: 1pt solid #d4ded4; padding-bottom: 2mm; margin-bottom: 4mm; }
+.bill-meta { display: flex; flex-wrap: wrap; gap: 2mm 7mm; margin-bottom: 4mm; font-size: 9.5pt; }
+.bill-meta span { color: #555; }
+.bill-meta span strong { color: #1a1a1a; }
+table { width: 100%; border-collapse: collapse; }
+thead th { background: #245C45; color: #fff; font-size: 9pt; font-weight: 700; padding: 4px 7px; }
+thead th:not([style]) { text-align: center; }
+tbody td { border: 0.5pt solid #c8d4c8; padding: 5px 7px; font-size: 9.5pt; text-align: center; vertical-align: middle; }
+tbody tr:nth-child(even) td { background: #f4f8f4; }
+tfoot td { background: #e7efe9; border: 0.5pt solid #245C45; border-top: 1.5pt solid #245C45; font-weight: 700; font-size: 9.5pt; text-align: center; }
+.bal-wrap { border: 1pt solid #c8d4c8; border-radius: 4px; overflow: hidden; }
+.bal-row { display: flex; justify-content: space-between; align-items: center; padding: 3.5mm 5mm; font-size: 10pt; border-bottom: 0.5pt solid #e5e9e5; }
+.bal-row:last-child { border-bottom: none; }
+.bal-row.indent { padding-left: 12mm; font-size: 9.5pt; color: #444; background: #fafcfa; }
+.bal-row.subtotal { background: #f0f5f0; font-weight: 600; }
+.bal-row.closing { background: #245C45; color: #fff; font-weight: 700; font-size: 11pt; }
+.badge { font-size: 8pt; font-weight: 700; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
+.badge.paid { background: #e8f3ea; color: #267443; }
+.badge.unpaid { background: #fff3dc; color: #986000; }
+.ftr { margin-top: 8mm; font-size: 8pt; color: #999; display: flex; justify-content: space-between; border-top: 0.5pt solid #d4ded4; padding-top: 3mm; }
+</style>
+</head><body>
+
+<div class="hdr">
+  <div>
+    <h1>Wel House Residency</h1>
+    <div style="font-size:9.5pt;color:#555;margin-top:1.5mm">Monthly Summary Report</div>
+  </div>
+  <div class="hdr-right">Prepared for apartment group<strong>${label}</strong>Printed ${printed}</div>
+</div>
+
+<div class="sum-grid">
+  <div class="sum-box">
+    <div class="lbl">Opening Balance</div>
+    <div class="val">LKR ${fmtP(r.opening)}</div>
+  </div>
+  <div class="sum-box">
+    <div class="lbl">Total Collected</div>
+    <div class="val">LKR ${fmtP(ov.waterCollected + r.income + other.income)}</div>
+    <div class="sub">Water + Maint${other.income > 0 ? " + Other" : ""}</div>
+  </div>
+  <div class="sum-box">
+    <div class="lbl">Total Expenses</div>
+    <div class="val">LKR ${fmtP(r.totalExpenses + other.expenses)}</div>
+    <div class="sub">${r.expenses.length} item${r.expenses.length !== 1 ? "s" : ""}${other.expenses > 0 ? " + other" : ""}</div>
+  </div>
+  <div class="sum-box accent">
+    <div class="lbl">Closing Balance</div>
+    <div class="val">LKR ${fmtP(ov.closing)}</div>
+    <div class="sub">${ov.closing < 0 ? "Deficit" : "Surplus"}</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-title">1. Water Bill — ${label}</div>
+  ${water.ok ? `<div class="bill-meta">
+    <span>Total units: <strong>${water.billUnits}</strong></span>
+    <span>Bill amount: <strong>LKR ${fmtP(water.billAmount)}</strong></span>
+    <span>Rate per unit: <strong>LKR ${fmtP(water.rate)}</strong></span>
+    ${water.fixed > 0 ? `<span>Fixed charge: <strong>LKR ${fmtP(water.fixed)}</strong></span>` : ""}
+    <span>House meters total: <strong>${(Math.round(water.houseTotal * 100) / 100).toLocaleString("en-LK", { maximumFractionDigits: 2 })} units</strong></span>
+    <span>Common units: <strong>${Number.isFinite(water.common) ? (Math.round(water.common * 100) / 100).toLocaleString("en-LK", { maximumFractionDigits: 2 }) : "—"} units</strong></span>
+  </div>` : ""}
+  ${waterRowsHtml}
+</div>
+
+<div class="section">
+  <div class="sec-title">2. Maintenance Collection — ${label}</div>
+  <div class="bill-meta">
+    <span>Fee per house: <strong>LKR ${fmtP(r.fee)}</strong></span>
+    <span>Maintenance paid: <strong>${r.paidHouses.length} of ${houses.length} houses</strong></span>
+    <span>Water paid: <strong>${ov.waterPaidHouses.length} of ${houses.length} houses</strong></span>
+  </div>
+  ${maintRowsHtml}
+</div>
+
+<div class="section">
+  <div class="sec-title">3. Expenses — ${label}</div>
+  ${expHtml}
+</div>
+
+${other.txns.length ? `<div class="section">
+  <div class="sec-title">4. Other Transactions — ${label}</div>
+  ${otherHtml}
+</div>` : ""}
+
+<div class="section">
+  <div class="sec-title">${other.txns.length ? "5" : "4"}. Balance Sheet — ${label}</div>
+  <div class="bal-wrap">
+    <div class="bal-row"><span>Opening balance</span><span>LKR ${fmtP(r.opening)}</span></div>
+    <div class="bal-row indent"><span>+ Water collected (${ov.waterPaidHouses.length} of ${houses.length} houses)</span><span>LKR ${fmtP(ov.waterCollected)}</span></div>
+    <div class="bal-row indent"><span>+ Maintenance collected (${r.paidHouses.length} of ${houses.length} houses)</span><span>LKR ${fmtP(r.income)}</span></div>
+    ${other.income > 0 ? `<div class="bal-row indent"><span>+ Other income</span><span>LKR ${fmtP(other.income)}</span></div>` : ""}
+    <div class="bal-row subtotal"><span>= Subtotal before expenses</span><span>LKR ${fmtP(r.opening + ov.waterCollected + r.income + other.income)}</span></div>
+    ${r.totalExpenses > 0 ? `<div class="bal-row indent"><span>− Expenses (${r.expenses.length} item${r.expenses.length !== 1 ? "s" : ""})</span><span style="color:#B42318">− LKR ${fmtP(r.totalExpenses)}</span></div>` : ""}
+    ${other.expenses > 0 ? `<div class="bal-row indent"><span>− Other expenses</span><span style="color:#B42318">− LKR ${fmtP(other.expenses)}</span></div>` : ""}
+    <div class="bal-row closing"><span>Closing balance</span><span style="color:${ov.closing < 0 ? "#ffaaaa" : "#aaffcc"}">LKR ${fmtP(ov.closing)}</span></div>
+  </div>
+</div>
+
+<div class="ftr">
+  <span>Wel House Residency &middot; ${label} &middot; This report was generated on ${printed}</span>
+  <span>Wel House Residency Management</span>
+</div>
+
+<script>window.onload=()=>{window.print();}<\/script>
+</body></html>`;
+
+    const w = window.open("", "_blank");
+    if (!w) { alert("Allow pop-ups to export the monthly summary."); return; }
+    w.document.write(html);
+    w.document.close();
+  }
+
   function printCollectionSheet() {
     const water = compute(cur);
     const mt = cur.maint || {};
@@ -1273,7 +1541,8 @@ tfoot td { background: #e7efe9; border: 1pt solid #245C45; border-top: 2pt solid
 
   // ---- Events ----
 
-  // Print collection sheet
+  // Export buttons
+  $("exportSummary").addEventListener("click", exportMonthlySummary);
   $("printMaint").addEventListener("click", printCollectionSheet);
 
   // Tab bar
