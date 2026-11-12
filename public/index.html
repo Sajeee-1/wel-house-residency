@@ -330,6 +330,75 @@
   .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: transparent; box-shadow: none; }
   .tab-btn:hover:not(.active) { color: var(--ink); border-color: transparent; background: transparent; }
 
+  /* ── Dashboard overview ── */
+  .dash-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .dash-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
+  .dash-amount { font-family: var(--mono); font-size: 32px; font-weight: 700; margin-top: 6px; line-height: 1; }
+  .dash-meta { text-align: right; }
+
+  .collect-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .collect-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 16px 18px;
+  }
+  .collect-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
+  .collect-amount { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--ink); margin: 6px 0 4px; line-height: 1.2; }
+  .collect-sub { font-size: 12px; color: var(--muted); }
+
+  .payment-list { display: flex; flex-direction: column; }
+  .payment-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .payment-row:last-child { border-bottom: none; }
+  .pay-pill { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+  .pay-pill.paid   { background: var(--ok-soft);  color: var(--ok);   }
+  .pay-pill.unpaid { background: var(--warn-soft); color: var(--warn); }
+  .payment-outstanding { margin-left: auto; font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+
+  .quick-nav { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .nav-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--card);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .nav-card:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+  .nav-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--accent-soft);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .nav-card:hover .nav-icon { background: rgba(36,92,69,.15); }
+  .nav-icon svg { width: 16px; height: 16px; color: var(--accent); }
+  .nav-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .nav-desc  { font-size: 12px; color: var(--muted); line-height: 1.3; }
+
   /* ── Month card header layout ── */
   .month-header {
     display: flex;
@@ -404,6 +473,10 @@
     .btns > button { flex: 1 1 auto; }
     body.is-editor .toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
     .tab-btn { font-size: 11px; padding: 8px 4px; }
+    .dash-amount { font-size: 24px; }
+    .collect-amount { font-size: 17px; }
+    .payment-outstanding { margin-left: 0; width: 100%; padding-top: 2px; }
+    .dash-meta { text-align: left; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -444,18 +517,32 @@
 
   <!-- OVERVIEW TAB -->
   <div class="tab-panel" id="tab-overview">
-    <div class="card">
-      <h2>Balance sheet</h2>
-      <div class="stats" id="overviewBalance"></div>
+    <!-- Balance hero -->
+    <div class="card dash-hero">
+      <div>
+        <div class="dash-label">Closing balance</div>
+        <div class="dash-amount" id="heroBalance">—</div>
+      </div>
+      <div class="dash-meta" id="heroMeta"></div>
     </div>
-    <div class="card">
-      <h2>Collection this month</h2>
-      <div class="stats" id="overviewCollection"></div>
-    </div>
+    <!-- Collection progress cards -->
+    <div class="collect-grid" id="overviewCollection"></div>
+    <!-- Outstanding payments -->
     <div class="card">
       <h2>Outstanding payments</h2>
       <div id="overviewUnpaid"></div>
     </div>
+    <!-- Balance sheet breakdown -->
+    <div class="card">
+      <h2>Balance sheet</h2>
+      <div class="stats" id="overviewBalance"></div>
+    </div>
+    <!-- Quick access navigation -->
+    <div class="card">
+      <h2>Quick access</h2>
+      <div class="quick-nav" id="quickNav"></div>
+    </div>
+    <!-- Expenses by group -->
     <div class="card" id="overviewExpCard">
       <h2>Expenses by group</h2>
       <div id="overviewExpenses"></div>
@@ -765,37 +852,61 @@
     const ov = computeOverview(cur);
     const houses = housesOf(cur);
     const closingColor = ov.closing < 0 ? "var(--bad)" : "var(--ok)";
+    const totalCollected = ov.waterCollected + ov.maint.income + ov.other.income;
 
-    $("overviewBalance").innerHTML = [
-      ["Opening balance", fmt(ov.maint.opening), "LKR"],
-      ["+ Maint collected", fmt(ov.maint.income), `${ov.maint.paidHouses.length} of ${houses.length} houses`],
-      ["+ Other income", fmt(ov.other.income), "LKR"],
-      ["− Maint expenses", fmt(ov.maint.totalExpenses), "LKR"],
-      ["− Other expenses", fmt(ov.other.expenses), "LKR"],
-      ["= Closing balance", `<span style="color:${closingColor};font-weight:700">${fmt(ov.closing)}</span>`, ov.closing < 0 ? "⚠ deficit" : "LKR"],
-    ].map(([k, v, hh]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="h">${hh}</div></div>`).join("");
+    // Hero: closing balance + total collected
+    $("heroBalance").innerHTML = `<span style="color:${closingColor}">LKR ${fmt(ov.closing)}</span>`;
+    $("heroMeta").innerHTML = `
+      <div>
+        <div class="dash-label">${monthLabel(cur.month)}</div>
+        <div style="font-family:var(--mono);font-size:20px;font-weight:700;margin-top:6px;color:var(--ink)">LKR ${fmt(totalCollected)}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">Total received this month</div>
+      </div>`;
 
+    // Collection progress cards
     $("overviewCollection").innerHTML = [
-      ["Water collected", fmt(ov.waterCollected), `${ov.waterPaidHouses.length} of ${houses.length} paid`],
-      ["Maint collected", fmt(ov.maint.income), `${ov.maint.paidHouses.length} of ${houses.length} paid`],
-      ["Other income", fmt(ov.other.income), "LKR"],
-      ["Total received", fmt(ov.waterCollected + ov.maint.income + ov.other.income), "this month"],
-    ].map(([k, v, hh]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="h">${hh}</div></div>`).join("");
+      { label: "Water collected",  amount: fmt(ov.waterCollected), sub: `${ov.waterPaidHouses.length} of ${houses.length} paid` },
+      { label: "Maint collected",  amount: fmt(ov.maint.income),   sub: `${ov.maint.paidHouses.length} of ${houses.length} paid` },
+      { label: "Other income",     amount: fmt(ov.other.income),   sub: "this month" },
+    ].map(c => `<div class="collect-card"><div class="collect-label">${c.label}</div><div class="collect-amount">LKR ${c.amount}</div><div class="collect-sub">${c.sub}</div></div>`).join("");
 
+    // Outstanding payments
     if (ov.unpaid.length === 0) {
       $("overviewUnpaid").innerHTML = `<div class="msg ok">All houses fully paid for ${monthLabel(cur.month)}.</div>`;
     } else {
-      $("overviewUnpaid").innerHTML = ov.unpaid.map(u => {
+      $("overviewUnpaid").innerHTML = `<div class="payment-list">${ov.unpaid.map(u => {
         const outstanding = (u.waterPaid ? 0 : u.waterAmt) + (u.maintPaid ? 0 : u.maintAmt);
-        return `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)">
+        return `<div class="payment-row">
           <span class="house-badge">${esc(u.house)}</span>
-          <span style="font-size:12px;padding:2px 8px;border-radius:999px;background:${u.waterPaid ? "var(--ok-soft)" : "var(--warn-soft)"};color:${u.waterPaid ? "var(--ok)" : "var(--warn)"};font-weight:600;border:1px solid ${u.waterPaid ? "var(--ok)" : "var(--warn)"}">W: ${u.waterPaid ? "✓" : "✗"}${u.waterAmt ? " " + fmt(u.waterAmt) : ""}</span>
-          <span style="font-size:12px;padding:2px 8px;border-radius:999px;background:${u.maintPaid ? "var(--ok-soft)" : "var(--warn-soft)"};color:${u.maintPaid ? "var(--ok)" : "var(--warn)"};font-weight:600;border:1px solid ${u.maintPaid ? "var(--ok)" : "var(--warn)"}">M: ${u.maintPaid ? "✓" : "✗"}${u.maintAmt ? " " + fmt(u.maintAmt, 0) : ""}</span>
-          <span class="muted small" style="margin-left:auto">Outstanding: LKR ${fmt(outstanding)}</span>
+          <span class="pay-pill ${u.waterPaid ? "paid" : "unpaid"}">Water ${u.waterPaid ? "✓ Paid" : "✗ Unpaid"}</span>
+          <span class="pay-pill ${u.maintPaid ? "paid" : "unpaid"}">Maint ${u.maintPaid ? "✓ Paid" : "✗ Unpaid"}</span>
+          <span class="payment-outstanding">LKR ${fmt(outstanding)}</span>
         </div>`;
-      }).join("");
+      }).join("")}</div>`;
     }
 
+    // Balance sheet breakdown
+    $("overviewBalance").innerHTML = [
+      ["Opening balance",   fmt(ov.maint.opening),       "LKR"],
+      ["+ Maint collected", fmt(ov.maint.income),         `${ov.maint.paidHouses.length} of ${houses.length} houses`],
+      ["+ Other income",    fmt(ov.other.income),         "LKR"],
+      ["− Maint expenses",  fmt(ov.maint.totalExpenses),  "LKR"],
+      ["− Other expenses",  fmt(ov.other.expenses),       "LKR"],
+      ["= Closing balance", `<span style="color:${closingColor};font-weight:700">${fmt(ov.closing)}</span>`, ov.closing < 0 ? "⚠ deficit" : "LKR"],
+    ].map(([k, v, hh]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="h">${hh}</div></div>`).join("");
+
+    // Quick access navigation cards
+    $("quickNav").innerHTML = [
+      { tab: "water",       svg: `<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>`,                                                                        title: "Water bill",         desc: "Meter readings & split" },
+      { tab: "maintenance", svg: `<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>`,                     title: "Maintenance",        desc: "Fees & collection" },
+      { tab: "other",       svg: `<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>`,                                   title: "Other transactions", desc: "Income & expenses" },
+    ].map(n => `<button class="nav-card" data-switchtab="${esc(n.tab)}">
+      <div class="nav-icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${n.svg}</svg></div>
+      <div class="nav-title">${n.title}</div>
+      <div class="nav-desc">${n.desc}</div>
+    </button>`).join("");
+
+    // Expenses by group
     const nonZero = EXPENSE_GROUPS.filter(g => ov.maint.byGroup[g] > 0);
     if (nonZero.length) {
       $("overviewExpenses").innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px">
@@ -989,6 +1100,12 @@
   $("tabBar").addEventListener("click", e => {
     const btn = e.target.closest(".tab-btn"); if (!btn) return;
     switchTab(btn.dataset.tab);
+  });
+
+  // Overview quick-nav cards
+  $("tab-overview").addEventListener("click", e => {
+    const btn = e.target.closest(".nav-card"); if (!btn) return;
+    switchTab(btn.dataset.switchtab);
   });
 
   // Month selector
