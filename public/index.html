@@ -638,7 +638,10 @@
   <!-- MAINTENANCE TAB -->
   <div class="tab-panel" id="tab-maintenance" role="tabpanel" aria-labelledby="tbtn-maintenance" hidden>
     <div class="card" id="maintCard">
-      <h2>Maintenance fee &amp; collection</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+        <h2 style="margin:0">Maintenance fee &amp; collection</h2>
+        <button id="printMaint" title="Open a print-ready A4 landscape sheet">⬇ Print collection sheet</button>
+      </div>
       <div class="form-section grid editor-only">
         <div><label for="maintFee">Fee per house (LKR)</label><input id="maintFee" class="num" inputmode="decimal"></div>
         <div><label for="maintOpening">Opening balance (LKR)</label><input id="maintOpening" class="num" inputmode="decimal"></div>
@@ -1059,6 +1062,98 @@
   }
 
   // ---- Maintenance tab ----
+  function printCollectionSheet() {
+    const water = compute(cur);
+    const mt = cur.maint || {};
+    const r = computeMaint(cur);
+    const houses = housesOf(cur);
+    const label = monthLabel(cur.month);
+    const fmtP = n => Number.isFinite(n) ? n.toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";
+
+    const rows = houses.map(h => {
+      const waterRow = water.ok ? water.rows.find(x => x.house === h) : null;
+      const waterAmt = waterRow ? waterRow.amount : null;
+      const maintAmt = Number.isFinite(r.fee) ? r.fee : null;
+      const total = (waterAmt ?? 0) + (maintAmt ?? 0);
+      return { house: h, waterAmt, maintAmt, total };
+    });
+    const totalWater = rows.reduce((s, x) => s + (x.waterAmt ?? 0), 0);
+    const totalMaint = rows.reduce((s, x) => s + (x.maintAmt ?? 0), 0);
+    const grandTotal = totalWater + totalMaint;
+    const printed = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+    const html = `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<title>Collection Sheet \u2013 ${label}</title>
+<style>
+@page { size: A4 landscape; margin: 12mm 15mm; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, "Noto Sans", sans-serif; font-size: 11pt; color: #1a1a1a; }
+.hdr { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2.5pt solid #245C45; padding-bottom: 4mm; margin-bottom: 7mm; }
+.hdr h1 { font-size: 16pt; font-weight: 700; color: #245C45; letter-spacing: -0.3px; }
+.hdr-right { text-align: right; color: #444; font-size: 10.5pt; line-height: 1.5; }
+.hdr-right strong { display: block; font-size: 13pt; color: #1a1a1a; }
+table { width: 100%; border-collapse: collapse; }
+thead th { background: #245C45; color: #fff; font-size: 10pt; font-weight: 700; padding: 6px 8px; text-align: center; }
+tbody td { border: 1pt solid #c8d4c8; padding: 7px 8px; font-size: 10.5pt; text-align: center; vertical-align: middle; }
+tbody tr:nth-child(even) td { background: #f4f8f4; }
+.sign-col { width: 72mm; }
+.date-col { width: 30mm; }
+.house-col { width: 20mm; font-weight: 700; }
+.amt-col { width: 42mm; font-variant-numeric: tabular-nums; }
+tfoot td { background: #e7efe9; border: 1pt solid #245C45; border-top: 2pt solid #245C45; font-weight: 700; font-size: 10.5pt; text-align: center; }
+.ftr { margin-top: 7mm; font-size: 8.5pt; color: #666; display: flex; justify-content: space-between; }
+</style>
+</head><body>
+<div class="hdr">
+  <h1>Wel House Residency</h1>
+  <div class="hdr-right">Monthly Collection Sheet<strong>${label}</strong></div>
+</div>
+<table>
+  <thead>
+    <tr>
+      <th class="house-col">House No.</th>
+      <th class="amt-col">Water Charges<br>(LKR)</th>
+      <th class="amt-col">Maintenance<br>(LKR)</th>
+      <th class="amt-col">Total<br>(LKR)</th>
+      <th class="sign-col">Signature</th>
+      <th class="date-col">Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${rows.map(row => `<tr>
+      <td class="house-col">${row.house}</td>
+      <td class="amt-col">${row.waterAmt != null ? fmtP(row.waterAmt) : "—"}</td>
+      <td class="amt-col">${row.maintAmt != null ? fmtP(row.maintAmt) : "—"}</td>
+      <td class="amt-col">${fmtP(row.total)}</td>
+      <td class="sign-col"></td>
+      <td class="date-col"></td>
+    </tr>`).join("")}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td>Total</td>
+      <td class="amt-col">${fmtP(totalWater)}</td>
+      <td class="amt-col">${fmtP(totalMaint)}</td>
+      <td class="amt-col">${fmtP(grandTotal)}</td>
+      <td colspan="2"></td>
+    </tr>
+  </tfoot>
+</table>
+<div class="ftr">
+  <span>Wel House Residency &middot; ${label} &middot; Printed ${printed}</span>
+  <span>Water rate: ${water.ok ? "LKR " + fmtP(water.rate) + " / unit" : "pending"} &middot; Maintenance fee: LKR ${Number.isFinite(r.fee) ? fmtP(r.fee) : "—"} / house</span>
+</div>
+<script>window.onload=()=>{window.print();}<\/script>
+</body></html>`;
+
+    const w = window.open("", "_blank");
+    if (!w) { alert("Allow pop-ups to print the collection sheet."); return; }
+    w.document.write(html);
+    w.document.close();
+  }
+
   function renderMaintenance() {
     const water = compute(cur);
     const mt = cur.maint || {};
@@ -1177,6 +1272,9 @@
   }
 
   // ---- Events ----
+
+  // Print collection sheet
+  $("printMaint").addEventListener("click", printCollectionSheet);
 
   // Tab bar
   $("tabBar").addEventListener("click", e => {
