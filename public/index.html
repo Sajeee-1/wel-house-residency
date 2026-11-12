@@ -218,7 +218,7 @@
     background: var(--card);
     color: var(--ink);
     transition: background 0.15s, border-color 0.15s, color 0.15s;
-    min-height: 34px;
+    min-height: 44px;
   }
   .chip:hover { border-color: var(--accent); color: var(--accent); }
   .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -325,7 +325,7 @@
     cursor: pointer;
     transition: color 0.15s, border-bottom-color 0.15s;
     white-space: nowrap;
-    min-height: 42px;
+    min-height: 44px;
   }
   .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: transparent; box-shadow: none; }
   .tab-btn:hover:not(.active) { color: var(--ink); border-color: transparent; background: transparent; }
@@ -401,7 +401,7 @@
 
   /* ── Pay-toggle buttons (maintenance table) ── */
   .pay-toggle {
-    min-height: auto;
+    min-height: 44px;
     padding: 3px 10px;
     border-radius: 999px;
     font-size: 12px;
@@ -409,6 +409,8 @@
     cursor: pointer;
     margin-left: 4px;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
   }
   .pay-toggle.paid   { background: var(--ok-soft);  color: var(--ok);   border-color: var(--ok);   }
   .pay-toggle.unpaid { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); }
@@ -553,10 +555,10 @@
 
   <!-- Tab bar -->
   <div class="tabs" id="tabBar" role="tablist" aria-label="Application sections">
-    <button class="tab-btn active" data-tab="overview"     role="tab" id="tbtn-overview"     aria-selected="true"  aria-controls="tab-overview">Overview</button>
-    <button class="tab-btn"        data-tab="water"        role="tab" id="tbtn-water"        aria-selected="false" aria-controls="tab-water">Water</button>
-    <button class="tab-btn"        data-tab="maintenance"  role="tab" id="tbtn-maintenance"  aria-selected="false" aria-controls="tab-maintenance">Maintenance</button>
-    <button class="tab-btn"        data-tab="other"        role="tab" id="tbtn-other"        aria-selected="false" aria-controls="tab-other">Other</button>
+    <button class="tab-btn active" data-tab="overview"     role="tab" id="tbtn-overview"     aria-selected="true"  aria-controls="tab-overview"    tabindex="0">Overview</button>
+    <button class="tab-btn"        data-tab="water"        role="tab" id="tbtn-water"        aria-selected="false" aria-controls="tab-water"         tabindex="-1">Water</button>
+    <button class="tab-btn"        data-tab="maintenance"  role="tab" id="tbtn-maintenance"  aria-selected="false" aria-controls="tab-maintenance"   tabindex="-1">Maintenance</button>
+    <button class="tab-btn"        data-tab="other"        role="tab" id="tbtn-other"        aria-selected="false" aria-controls="tab-other"         tabindex="-1">Other</button>
   </div>
 
   <!-- OVERVIEW TAB -->
@@ -621,7 +623,7 @@
           <tfoot><tr id="totals"></tr></tfoot>
         </table>
       </div>
-      <div class="msgs" id="msgs"></div>
+      <div class="msgs" id="msgs" aria-live="polite"></div>
     </div>
     <div class="card">
       <h2>Summary</h2>
@@ -737,7 +739,7 @@
     </details>
   </div>
 </div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script>
 (() => {
@@ -884,12 +886,26 @@
   function switchTab(t) {
     curTab = t;
     document.querySelectorAll(".tab-btn").forEach(b => {
-      b.classList.toggle("active", b.dataset.tab === t);
-      b.setAttribute("aria-selected", b.dataset.tab === t ? "true" : "false");
+      const active = b.dataset.tab === t;
+      b.classList.toggle("active", active);
+      b.setAttribute("aria-selected", active ? "true" : "false");
+      b.setAttribute("tabindex", active ? "0" : "-1");
     });
     document.querySelectorAll(".tab-panel").forEach(p => { p.hidden = p.id !== `tab-${t}`; });
     renderTab(t);
   }
+
+  $("tabBar").addEventListener("keydown", e => {
+    const tabs = [...document.querySelectorAll(".tab-btn")];
+    const idx = tabs.findIndex(b => b === document.activeElement);
+    if (idx === -1) return;
+    let next = -1;
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") next = (idx + 1) % tabs.length;
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") next = (idx - 1 + tabs.length) % tabs.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = tabs.length - 1;
+    if (next !== -1) { e.preventDefault(); tabs[next].focus(); switchTab(tabs[next].dataset.tab); }
+  });
   function renderTab(t) {
     if (t === "overview")       renderOverview();
     else if (t === "water")        renderWater();
@@ -1011,7 +1027,12 @@
     const r = compute(cur);
     r.rows.forEach(row => {
       const tr = [...$("rows").children].find(t => t.dataset.house === row.house); if (!tr) return;
-      if (editor) for (const k of ["prev", "curr"]) tr.querySelector(`[data-k="${k}"]`).classList.toggle("err", row.bad.includes(k) && (cur.readings?.[row.house]?.[k] ?? "") !== "");
+      if (editor) for (const k of ["prev", "curr"]) {
+        const inp = tr.querySelector(`[data-k="${k}"]`);
+        const isErr = row.bad.includes(k) && (cur.readings?.[row.house]?.[k] ?? "") !== "";
+        inp.classList.toggle("err", isErr);
+        inp.setAttribute("aria-invalid", isErr ? "true" : "false");
+      }
       tr.querySelector('[data-o="units"]').innerHTML = (Number.isFinite(row.units) ? fmtU(row.units) : "—")
         + (row.rolled ? `<span class="tag roll">rollover</span>` : "") + (row.suspicious ? `<span class="tag warn">check</span>` : "");
       tr.querySelector('[data-o="common"]').textContent = r.ok ? fmtU(row.commonShare) : "—";
