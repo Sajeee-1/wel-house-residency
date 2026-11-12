@@ -399,6 +399,34 @@
   .nav-title { font-size: 14px; font-weight: 600; color: var(--ink); }
   .nav-desc  { font-size: 12px; color: var(--muted); line-height: 1.3; }
 
+  /* ── Pay-toggle buttons (maintenance table) ── */
+  .pay-toggle {
+    min-height: auto;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-left: 4px;
+    white-space: nowrap;
+  }
+  .pay-toggle.paid   { background: var(--ok-soft);  color: var(--ok);   border-color: var(--ok);   }
+  .pay-toggle.unpaid { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); }
+  .pay-toggle:hover:not(:disabled) { opacity: 0.78; color: inherit; border-color: inherit; background: inherit; }
+
+  /* ── Transaction type badge (Other tab) ── */
+  .txn-pill { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+  .txn-pill.income  { background: var(--ok-soft);  color: var(--ok);  }
+  .txn-pill.expense { background: var(--bad-soft); color: var(--bad); }
+
+  /* ── Expense group chips ── */
+  .exp-group-wrap { margin-top: 14px; }
+  .exp-group-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; margin-bottom: 10px; }
+  .exp-group-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .exp-group-chip { padding: 8px 14px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--bg); }
+  .exp-group-name { font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .exp-group-amt  { font-family: var(--mono); font-size: 15px; font-weight: 700; margin-top: 3px; color: var(--ink); }
+
   /* ── Month card header layout ── */
   .month-header {
     display: flex;
@@ -693,6 +721,7 @@
   const nextMonth = s => { const [y, m] = s.split("-").map(Number); const d = new Date(y, m, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
   const thisMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
   const fmtTime = iso => iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+  const fmtDate = s => { if (!s) return ""; const d = new Date(s + "T00:00"); return isNaN(d) ? s : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
 
   const editKey = new URLSearchParams(location.hash.slice(1)).get("key");
   let editor = null;
@@ -982,12 +1011,6 @@
     $("maintOpening").value = mt.openingBalance ?? 0;
     $("maintOpening").disabled = !isEd;
 
-    const pill = (paid, label) => {
-      const c = paid ? "var(--ok)" : "var(--warn)";
-      const bg = paid ? "var(--ok-soft)" : "var(--warn-soft)";
-      return `style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:4px;border:1px solid ${c};background:${bg};color:${c}"`;
-    };
-
     $("maintRows").innerHTML = houses.map(h => {
       const wPaid = mt.waterPaid?.[h] ?? false;
       const mPaid = mt.maintPaid?.[h] ?? mt.paid?.[h] ?? false;
@@ -996,17 +1019,17 @@
       const received = (wPaid && waterAmt != null ? waterAmt : 0) + (mPaid && Number.isFinite(r.fee) ? r.fee : 0);
 
       const wEl = isEd
-        ? `<button class="pay-toggle" data-house="${esc(h)}" data-type="water" ${pill(wPaid)}>${wPaid ? "✓" : "✗"} W</button>`
-        : `<span ${pill(wPaid)}>${wPaid ? "✓" : "✗"} W</span>`;
+        ? `<button class="pay-toggle ${wPaid ? "paid" : "unpaid"}" data-house="${esc(h)}" data-type="water">Water ${wPaid ? "✓" : "✗"}</button>`
+        : `<span class="pay-pill ${wPaid ? "paid" : "unpaid"}">Water ${wPaid ? "✓" : "✗"}</span>`;
       const mEl = isEd
-        ? `<button class="pay-toggle" data-house="${esc(h)}" data-type="maint" ${pill(mPaid)}>${mPaid ? "✓" : "✗"} M</button>`
-        : `<span ${pill(mPaid)}>${mPaid ? "✓" : "✗"} M</span>`;
+        ? `<button class="pay-toggle ${mPaid ? "paid" : "unpaid"}" data-house="${esc(h)}" data-type="maint">Maint ${mPaid ? "✓" : "✗"}</button>`
+        : `<span class="pay-pill ${mPaid ? "paid" : "unpaid"}">Maint ${mPaid ? "✓" : "✗"}</span>`;
 
       return `<tr>
         <td data-l="House"><span class="house-badge">${esc(h)}</span></td>
-        <td data-l="Water bill" style="text-align:left">${waterAmt != null ? `<span class="m">${fmt(waterAmt)}</span>` : `<span class="muted small">pending</span>`} ${wEl}</td>
-        <td data-l="Maintenance" style="text-align:left"><span class="m">${Number.isFinite(r.fee) ? fmt(r.fee) : "—"}</span> ${mEl}</td>
-        <td data-l="Received (LKR)" class="m" data-o="amount">${received > 0 ? fmt(received) : "—"}</td>
+        <td data-l="Water bill" style="text-align:left">${waterAmt != null ? `<span class="m">LKR ${fmt(waterAmt)}</span>` : `<span class="muted small">Pending</span>`} ${wEl}</td>
+        <td data-l="Maintenance" style="text-align:left"><span class="m">LKR ${Number.isFinite(r.fee) ? fmt(r.fee) : "—"}</span> ${mEl}</td>
+        <td data-l="Received (LKR)" class="m" data-o="amount">${received > 0 ? `LKR ${fmt(received)}` : "—"}</td>
       </tr>`;
     }).join("");
 
@@ -1027,10 +1050,10 @@
     const expenses = mt.expenses || [];
     $("expEmpty").textContent = expenses.length ? "" : "No expenses recorded yet.";
     $("expRows").innerHTML = expenses.map(e => `<tr>
-      <td data-l="Date" class="m">${esc(e.date || "")}</td>
+      <td data-l="Date">${esc(fmtDate(e.date))}</td>
       <td data-l="Description" style="text-align:left;white-space:normal">${esc(e.desc || "")}</td>
       <td data-l="Group">${esc(e.group || "")}</td>
-      <td data-l="Amount (LKR)" class="m" data-o="amount">${fmt(num(e.amount))}</td>
+      <td data-l="Amount (LKR)" class="m" data-o="amount">LKR ${fmt(num(e.amount))}</td>
       <td class="editor-only" style="text-align:center"><button class="link danger exp-del" data-id="${esc(e.id)}" title="Delete">✕</button></td>
     </tr>`).join("");
 
@@ -1044,11 +1067,11 @@
 
     const nonZero = EXPENSE_GROUPS.filter(g => r.byGroup[g] > 0);
     $("expGroupStats").innerHTML = nonZero.length
-      ? `<div style="margin-top:12px"><div class="muted small" style="margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;font-weight:600">Expenses by group</div>
-         <div style="display:flex;flex-wrap:wrap;gap:8px">${nonZero.map(g =>
-           `<div style="padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg)">
-             <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em">${esc(g)}</div>
-             <div style="font-family:var(--mono);font-size:14px;font-weight:700;margin-top:2px">${fmt(r.byGroup[g])}</div>
+      ? `<div class="exp-group-wrap"><div class="exp-group-label">Expenses by group</div>
+         <div class="exp-group-grid">${nonZero.map(g =>
+           `<div class="exp-group-chip">
+             <div class="exp-group-name">${esc(g)}</div>
+             <div class="exp-group-amt">LKR ${fmt(r.byGroup[g])}</div>
            </div>`).join("")}</div></div>`
       : "";
   }
@@ -1059,12 +1082,11 @@
     $("otherEmpty").textContent = r.txns.length ? "" : "No transactions recorded yet.";
     $("otherRows").innerHTML = r.txns.map(t => {
       const isInc = t.type === "income";
-      const typeHtml = `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:${isInc ? "var(--ok-soft)" : "var(--bad-soft)"};color:${isInc ? "var(--ok)" : "var(--bad)"}">${isInc ? "Income" : "Expense"}</span>`;
       return `<tr>
-        <td data-l="Date" class="m">${esc(t.date || "")}</td>
+        <td data-l="Date">${esc(fmtDate(t.date))}</td>
         <td data-l="Description" style="text-align:left;white-space:normal">${esc(t.desc || "")}</td>
-        <td data-l="Type" style="text-align:left">${typeHtml}</td>
-        <td data-l="Amount (LKR)" class="m" data-o="amount">${fmt(t.amount)}</td>
+        <td data-l="Type" style="text-align:left"><span class="txn-pill ${isInc ? "income" : "expense"}">${isInc ? "Income" : "Expense"}</span></td>
+        <td data-l="Amount (LKR)" class="m" data-o="amount">LKR ${fmt(t.amount)}</td>
         <td class="editor-only" style="text-align:center"><button class="link danger other-del" data-id="${esc(t.id)}" title="Delete">✕</button></td>
       </tr>`;
     }).join("");
