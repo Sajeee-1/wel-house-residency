@@ -7,7 +7,8 @@
       "Bash(curl -s \"http://127.0.0.1:8788/api/data\")",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('houses:', len\\(d.get\\('houses',[]\\)\\), 'months:', len\\(d.get\\('months',[]\\)\\), 'config:', bool\\(d.get\\('config'\\)\\)\\)\")",
       "PowerShell(Invoke-WebRequest -Uri \"http://127.0.0.1:8788/api/data\" -Method GET | Select-Object -ExpandProperty Content | ConvertFrom-Json | Select-Object -Property houses, months, config)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(curl -s http://localhost:8787/)"
     ]
   }
 }

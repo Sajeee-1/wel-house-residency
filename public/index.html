@@ -650,14 +650,15 @@
 
   <!-- MAINTENANCE TAB -->
   <div class="tab-panel" id="tab-maintenance" role="tabpanel" aria-labelledby="tbtn-maintenance" hidden>
+    <div id="maintSummaryStats" class="stats" style="margin-bottom:12px"></div>
     <div class="card" id="maintCard">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px">
-        <h2 style="margin:0">Maintenance fee &amp; collection</h2>
+        <h2 style="margin:0">Monthly Collection</h2>
         <button id="printMaint" title="Open a print-ready A4 landscape sheet">⬇ Print collection sheet</button>
       </div>
       <div class="form-section grid editor-only">
         <div><label for="maintFee">Fee per house (LKR)</label><input id="maintFee" class="num" inputmode="decimal"></div>
-        <div><label for="maintOpening">Opening balance (LKR)</label><input id="maintOpening" class="num" inputmode="decimal"></div>
+        <div><label for="maintOpening">Opening balance (LKR) <span id="maintOpeningNote" class="muted small"></span></label><input id="maintOpening" class="num" inputmode="decimal"></div>
       </div>
       <div class="tablewrap">
         <table id="maintTable">
@@ -674,7 +675,7 @@
     </div>
   <!-- Water Board Payments -->
   <div class="card" id="waterBoardCard">
-    <h2>Water board payment</h2>
+    <h2>Water Board Payment</h2>
     <div class="stats" id="wbpStats" style="margin-bottom:16px"></div>
     <div class="form-section editor-only">
       <div class="grid">
@@ -729,7 +730,7 @@
 
   <!-- Secretary Float -->
   <div class="card" id="floatCard">
-    <h2>Secretary float</h2>
+    <h2>Secretary Float</h2>
     <div class="stats" id="floatStats" style="margin-bottom:16px"></div>
     <div class="form-section editor-only">
       <div class="grid">
@@ -925,7 +926,9 @@
     const mt = m.maint || {};
     const houses = housesOf(m);
     const fee = num(mt.feePerHouse ?? DEFAULT_FEE);
-    const opening = num(mt.openingBalance ?? 0) || 0;
+    const prevMonth = doc.months.filter(x => x.month < m.month && x.maint != null)
+      .sort((a, b) => b.month.localeCompare(a.month))[0];
+    const opening = prevMonth ? computeMaint(prevMonth).closing : (num(mt.openingBalance ?? 0) || 0);
     // backward-compat: fall back to old "paid" field
     const paidHouses = houses.filter(h => mt.maintPaid?.[h] ?? mt.paid?.[h]);
     const income = paidHouses.length * (Number.isFinite(fee) ? fee : 0);
@@ -1105,17 +1108,20 @@
     }
 
     // Balance sheet breakdown
-    $("overviewBalance").innerHTML = [
+    const fl = computeFloat(cur);
+    const balLines = [
       ["Opening balance",   fmt(ov.maint.opening),       "LKR"],
       ["+ Maint collected", fmt(ov.maint.income),         `${ov.maint.paidHouses.length} of ${houses.length} houses`],
       ["+ Other income",    fmt(ov.other.income),         "LKR"],
-      ["− Maint expenses",  fmt(ov.maint.totalExpenses),  "LKR"],
-      ["− Other expenses",  fmt(ov.other.expenses),       "LKR"],
-      ["= Closing balance", `<span style="color:${closingColor};font-weight:700">${fmt(ov.closing)}</span>`, ov.closing < 0 ? "⚠ deficit" : "LKR"],
-    ].map(([k, v, hh]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="h">${hh}</div></div>`).join("");
+    ];
+    if (fl.advances > 0) balLines.push(["+ We funded (float)", fmt(fl.advances), "we contributed"]);
+    balLines.push(["− Maint expenses",  fmt(ov.maint.totalExpenses),  "LKR"]);
+    balLines.push(["− Other expenses",  fmt(ov.other.expenses),       "LKR"]);
+    if (fl.recoveries > 0) balLines.push(["− We withdrew (debit)", fmt(fl.recoveries), "secretary debit"]);
+    balLines.push(["= Closing balance", `<span style="color:${closingColor};font-weight:700">${fmt(ov.closing)}</span>`, ov.closing < 0 ? "⚠ deficit" : "LKR"]);
+    $("overviewBalance").innerHTML = balLines.map(([k, v, hh]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="h">${hh}</div></div>`).join("");
 
     // Float outstanding
-    const fl = computeFloat(cur);
     if (fl.closing !== 0) {
       $("overviewBalance").innerHTML += `<div class="stat" style="border-color:var(--warn);background:var(--warn-soft)"><div class="k" style="color:var(--warn)">Secretary float owed</div><div class="v" style="color:var(--warn)">${fmt(fl.closing)}</div><div class="h" style="color:var(--warn)">owed to secretary</div></div>`;
     }
@@ -1564,10 +1570,22 @@ tfoot td { background: #e7efe9; border: 1pt solid #245C45; border-top: 2pt solid
     const houses = housesOf(cur);
     const isEd = !!editor;
 
+    const closingClr = r.closing < 0 ? "var(--bad)" : "var(--ok)";
+    $("maintSummaryStats").innerHTML = [
+      ["Opening balance", fmt(r.opening), "carried forward"],
+      ["+ Collected", fmt(r.income), `${r.paidHouses.length} of ${houses.length} houses`],
+      ["− Expenses", fmt(r.totalExpenses), "LKR"],
+      ["= Closing balance", `<span style="color:${closingClr};font-weight:700">${fmt(r.closing)}</span>`, r.closing < 0 ? "⚠ deficit" : "LKR"],
+    ].map(([k, v, hh]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="h">${hh}</div></div>`).join("");
+
     $("maintFee").value = mt.feePerHouse ?? DEFAULT_FEE;
     $("maintFee").disabled = !isEd;
-    $("maintOpening").value = mt.openingBalance ?? 0;
-    $("maintOpening").disabled = !isEd;
+    const hasPrev = doc.months.some(x => x.month < cur.month && x.maint != null);
+    $("maintOpening").value = r.opening;  // r.opening is now auto-computed
+    $("maintOpening").disabled = !isEd || hasPrev;
+    // Update label note
+    const noteEl = $("maintOpeningNote");
+    if (noteEl) noteEl.textContent = hasPrev ? "· auto-carried" : "";
 
     $("maintRows").innerHTML = houses.map(h => {
       const wPaid = mt.waterPaid?.[h] ?? false;
@@ -1645,6 +1663,9 @@ tfoot td { background: #e7efe9; border: 1pt solid #245C45; border-top: 2pt solid
     if (secFee) btns.push({ label: `Security — LKR ${fmt(secFee, 0)}`, group: "Security", amount: String(secFee), desc: "Security fee" });
     btns.push({ label: "EB bill", group: "Utilities", amount: "", desc: "EB bill" });
     btns.push({ label: "Cleaning", group: "Cleaning", amount: "", desc: "Cleaning" });
+    btns.push({ label: "Tea & Sugar", group: "Purchases", amount: "", desc: "Tea & Sugar" });
+    btns.push({ label: "Repair", group: "Repairs & Maintenance", amount: "", desc: "Repair" });
+    btns.push({ label: "We paid", group: "Others", amount: "", desc: "We paid" });
     $("expQuickBtns").innerHTML = btns.map(b =>
       `<button class="exp-quick" data-group="${esc(b.group)}" data-amount="${esc(b.amount)}" data-desc="${esc(b.desc)}">${esc(b.label)}</button>`
     ).join("");
