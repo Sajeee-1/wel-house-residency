@@ -454,6 +454,15 @@
   .hist { scrollbar-width: none; }
   .hist::-webkit-scrollbar { display: none; }
 
+  /* ── Float type pill ── */
+  .float-pill { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+  .float-pill.advance { background: var(--ok-soft);  color: var(--ok);  }
+  .float-pill.recover { background: var(--info-soft); color: var(--info); }
+
+  /* ── Config rate history table ── */
+  .rate-history { margin-top: 14px; }
+  .rate-history-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; margin-bottom: 10px; }
+
   /* ── Responsive ── */
   @media (max-width: 680px) {
     .wrap { padding: 16px 16px 80px; }
@@ -559,6 +568,7 @@
     <button class="tab-btn"        data-tab="water"        role="tab" id="tbtn-water"        aria-selected="false" aria-controls="tab-water"         tabindex="-1">Water</button>
     <button class="tab-btn"        data-tab="maintenance"  role="tab" id="tbtn-maintenance"  aria-selected="false" aria-controls="tab-maintenance"   tabindex="-1">Maintenance</button>
     <button class="tab-btn"        data-tab="other"        role="tab" id="tbtn-other"        aria-selected="false" aria-controls="tab-other"         tabindex="-1">Other</button>
+    <button class="tab-btn editor-only" data-tab="settings" role="tab" id="tbtn-settings"  aria-selected="false" aria-controls="tab-settings"      tabindex="-1">Settings</button>
   </div>
 
   <!-- OVERVIEW TAB -->
@@ -662,8 +672,35 @@
         </table>
       </div>
     </div>
+  <!-- Water Board Payments -->
+  <div class="card" id="waterBoardCard">
+    <h2>Water board payment</h2>
+    <div class="stats" id="wbpStats" style="margin-bottom:16px"></div>
+    <div class="form-section editor-only">
+      <div class="grid">
+        <div><label for="wbpDate">Date</label><input id="wbpDate" type="date"></div>
+        <div><label for="wbpAmt">Amount paid (LKR)</label><input id="wbpAmt" class="num" inputmode="decimal"></div>
+        <div style="grid-column:1/-1"><label for="wbpNote">Note</label><input id="wbpNote" type="text" placeholder="e.g. partial payment"></div>
+        <div style="display:flex;align-items:flex-end"><button id="addWbp" class="primary" style="width:100%">+ Record payment</button></div>
+      </div>
+    </div>
+    <div class="tablewrap">
+      <table id="wbpTable">
+        <thead><tr>
+          <th scope="col">Date</th>
+          <th scope="col" style="text-align:left">Note</th>
+          <th scope="col" class="th-amount">Amount (LKR)</th>
+          <th scope="col" class="editor-only" style="width:32px"></th>
+        </tr></thead>
+        <tbody id="wbpRows"></tbody>
+      </table>
+    </div>
+    <div id="wbpEmpty" class="empty-state"></div>
+  </div>
+
     <div class="card" id="expCard">
       <h2>Expenses</h2>
+      <div class="btns editor-only" id="expQuickBtns" style="margin-bottom:12px"></div>
       <div class="form-section editor-only">
         <div class="grid">
           <div><label for="expDate">Date</label><input id="expDate" type="date"></div>
@@ -689,6 +726,39 @@
       <div class="stats" id="maintStats" style="margin-top:16px"></div>
       <div id="expGroupStats"></div>
     </div>
+
+  <!-- Secretary Float -->
+  <div class="card" id="floatCard">
+    <h2>Secretary float</h2>
+    <div class="stats" id="floatStats" style="margin-bottom:16px"></div>
+    <div class="form-section editor-only">
+      <div class="grid">
+        <div><label for="floatType">Type</label>
+          <select id="floatType" class="sel">
+            <option value="advance">Advance — I put money in</option>
+            <option value="recover">Recover — I took money back</option>
+          </select>
+        </div>
+        <div><label for="floatDate">Date</label><input id="floatDate" type="date"></div>
+        <div><label for="floatAmt">Amount (LKR)</label><input id="floatAmt" class="num" inputmode="decimal"></div>
+        <div style="grid-column:1/-1"><label for="floatNote">Note</label><input id="floatNote" type="text" placeholder="e.g. paid EB before collection"></div>
+        <div style="display:flex;align-items:flex-end"><button id="addFloat" class="primary" style="width:100%">+ Record</button></div>
+      </div>
+    </div>
+    <div class="tablewrap">
+      <table id="floatTable">
+        <thead><tr>
+          <th scope="col">Date</th>
+          <th scope="col" style="text-align:left">Note</th>
+          <th scope="col" style="text-align:left">Type</th>
+          <th scope="col" class="th-amount">Amount (LKR)</th>
+          <th scope="col" class="editor-only" style="width:32px"></th>
+        </tr></thead>
+        <tbody id="floatRows"></tbody>
+      </table>
+    </div>
+    <div id="floatEmpty" class="empty-state"></div>
+  </div>
   </div>
 
   <!-- OTHER TRANSACTIONS TAB -->
@@ -726,6 +796,32 @@
     </div>
   </div>
 
+  <!-- SETTINGS TAB -->
+  <div class="tab-panel" id="tab-settings" role="tabpanel" aria-labelledby="tbtn-settings" hidden>
+    <div class="card">
+      <h2>Maintenance fee per house</h2>
+      <div class="form-section">
+        <div class="grid">
+          <div><label for="cfgMaintFrom">Effective from month</label><input id="cfgMaintFrom" type="month"></div>
+          <div><label for="cfgMaintAmt">Fee per house (LKR)</label><input id="cfgMaintAmt" class="num" inputmode="decimal"></div>
+          <div style="display:flex;align-items:flex-end"><button id="saveCfgMaint" class="primary" style="width:100%">Save rate</button></div>
+        </div>
+      </div>
+      <div class="rate-history"><div class="rate-history-label">Rate history</div><div id="cfgMaintHistory"></div></div>
+    </div>
+    <div class="card">
+      <h2>Security fee (monthly)</h2>
+      <div class="form-section">
+        <div class="grid">
+          <div><label for="cfgSecFrom">Effective from month</label><input id="cfgSecFrom" type="month"></div>
+          <div><label for="cfgSecAmt">Monthly fee (LKR)</label><input id="cfgSecAmt" class="num" inputmode="decimal"></div>
+          <div style="display:flex;align-items:flex-end"><button id="saveCfgSec" class="primary" style="width:100%">Save rate</button></div>
+        </div>
+      </div>
+      <div class="rate-history"><div class="rate-history-label">Rate history</div><div id="cfgSecHistory"></div></div>
+    </div>
+  </div>
+
   <!-- Versions (editor-only) -->
   <div class="card editor-only">
     <h2>Versions</h2>
@@ -754,6 +850,8 @@
   const EXPENSE_GROUPS = ["Repairs & Maintenance","Cleaning","Security","Utilities","Purchases","Others"];
   const makeExpenseId = () => `e_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
   const makeOtherId   = () => `o_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+  const makeWbpId   = () => `wbp_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+  const makeFloatId = () => `fl_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
 
   const $ = id => document.getElementById(id);
   const num = v => { if (v === "" || v == null) return NaN; const n = Number(String(v).replace(/,/g, "")); return Number.isFinite(n) ? n : NaN; };
@@ -818,10 +916,10 @@
   }
 
   // ---- Maintenance ----
-  function blankMaint(feePerHouse = DEFAULT_FEE, openingBalance = 0) {
+  function blankMaint(feePerHouse = DEFAULT_FEE, openingBalance = 0, floatOpening = 0) {
     const paid = {};
     HOUSES.forEach(h => paid[h] = false);
-    return { feePerHouse, openingBalance, waterPaid: { ...paid }, maintPaid: { ...paid }, expenses: [] };
+    return { feePerHouse, openingBalance, waterPaid: { ...paid }, maintPaid: { ...paid }, expenses: [], waterBoardPayments: [], float: [], floatOpening };
   }
   function computeMaint(m) {
     const mt = m.maint || {};
@@ -851,6 +949,34 @@
     const income = txns.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
     const expenses = txns.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
     return { txns, income, expenses };
+  }
+
+  function getRateForMonth(history, month) {
+    if (!history?.length) return null;
+    return [...history].filter(r => r.fromMonth <= month).sort((a, b) => b.fromMonth.localeCompare(a.fromMonth))[0] || null;
+  }
+
+  function computeWaterBoard(m, waterAmounts) {
+    const mt = m.maint || {};
+    const houses = housesOf(m);
+    const totalCollected = houses.filter(h => mt.waterPaid?.[h]).reduce((s, h) => s + (waterAmounts[h] || 0), 0);
+    const payments = (mt.waterBoardPayments || []).map(p => ({ ...p, amount: num(p.amount) || 0 }));
+    const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+    return { totalCollected, payments, totalPaid, pending: totalCollected - totalPaid };
+  }
+
+  function computeFloat(m) {
+    const mt = m.maint || {};
+    const opening = num(mt.floatOpening ?? 0) || 0;
+    const entries = (mt.float || []).map(e => ({ ...e, amount: num(e.amount) || 0 }));
+    const advances = entries.filter(e => e.type === "advance").reduce((s, e) => s + e.amount, 0);
+    const recoveries = entries.filter(e => e.type === "recover").reduce((s, e) => s + e.amount, 0);
+    return { opening, advances, recoveries, closing: opening + advances - recoveries, entries };
+  }
+
+  function prevFloatClosing(month) {
+    const prev = doc.months.filter(m => m.month < month && m.maint != null).sort((a, b) => b.month.localeCompare(a.month))[0];
+    return prev ? computeFloat(prev).closing : 0;
   }
 
   // ---- Overview calculation ----
@@ -884,7 +1010,9 @@
     const readings = {};
     HOUSES.forEach(h => readings[h] = { prev: prev?.readings?.[h]?.curr ?? "", curr: "" });
     const ob = prevClosing(month);
-    return { month, houses: HOUSES, billUnits: "", billAmount: "", fixedCharge: "", readings, maint: blankMaint(DEFAULT_FEE, ob), other: blankOther() };
+    const floatOb = prevFloatClosing(month);
+    const cfgFee = getRateForMonth(doc.config?.maintenanceFee, month)?.perUnit ?? DEFAULT_FEE;
+    return { month, houses: HOUSES, billUnits: "", billAmount: "", fixedCharge: "", readings, maint: blankMaint(cfgFee, ob, floatOb), other: blankOther() };
   }
   const selectLatest = () => { cur = doc.months.length ? clone(doc.months[doc.months.length - 1]) : blankMonth(thisMonth()); };
 
@@ -917,6 +1045,7 @@
     else if (t === "water")        renderWater();
     else if (t === "maintenance")  renderMaintenance();
     else if (t === "other")        renderOther();
+    else if (t === "settings")     renderSettings();
   }
 
   // ---- Top-level render (month selector + active tab) ----
@@ -984,6 +1113,12 @@
       ["− Other expenses",  fmt(ov.other.expenses),       "LKR"],
       ["= Closing balance", `<span style="color:${closingColor};font-weight:700">${fmt(ov.closing)}</span>`, ov.closing < 0 ? "⚠ deficit" : "LKR"],
     ].map(([k, v, hh]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="h">${hh}</div></div>`).join("");
+
+    // Float outstanding
+    const fl = computeFloat(cur);
+    if (fl.closing !== 0) {
+      $("overviewBalance").innerHTML += `<div class="stat" style="border-color:var(--warn);background:var(--warn-soft)"><div class="k" style="color:var(--warn)">Secretary float owed</div><div class="v" style="color:var(--warn)">${fmt(fl.closing)}</div><div class="h" style="color:var(--warn)">owed to secretary</div></div>`;
+    }
 
     // Quick access navigation cards
     $("quickNav").innerHTML = [
@@ -1497,6 +1632,91 @@ tfoot td { background: #e7efe9; border: 1pt solid #245C45; border-top: 2pt solid
              <div class="exp-group-amt">LKR ${fmt(r.byGroup[g])}</div>
            </div>`).join("")}</div></div>`
       : "";
+    renderWaterBoard();
+    renderFloat();
+    renderExpQuickBtns();
+  }
+
+  function renderExpQuickBtns() {
+    if (!editor) return;
+    const cfg = doc.config || {};
+    const secFee = getRateForMonth(cfg.securityFee, cur.month)?.amount;
+    const btns = [];
+    if (secFee) btns.push({ label: `Security — LKR ${fmt(secFee, 0)}`, group: "Security", amount: String(secFee), desc: "Security fee" });
+    btns.push({ label: "EB bill", group: "Utilities", amount: "", desc: "EB bill" });
+    btns.push({ label: "Cleaning", group: "Cleaning", amount: "", desc: "Cleaning" });
+    $("expQuickBtns").innerHTML = btns.map(b =>
+      `<button class="exp-quick" data-group="${esc(b.group)}" data-amount="${esc(b.amount)}" data-desc="${esc(b.desc)}">${esc(b.label)}</button>`
+    ).join("");
+  }
+
+  function renderWaterBoard() {
+    const water = compute(cur);
+    const waterAmounts = {};
+    if (water.ok) water.rows.forEach(r => waterAmounts[r.house] = r.amount);
+    const wb = computeWaterBoard(cur, waterAmounts);
+    const pendingColor = wb.pending > 0 ? "var(--warn)" : (wb.pending < 0 ? "var(--bad)" : "var(--ok)");
+    const pendingLabel = wb.pending > 0 ? "yet to pay" : (wb.pending < 0 ? "overpaid" : "fully paid");
+    $("wbpStats").innerHTML = [
+      ["Collected from houses", fmt(wb.totalCollected), "LKR"],
+      ["Paid to water board", fmt(wb.totalPaid), "LKR"],
+      ["Balance", `<span style="color:${pendingColor};font-weight:700">${fmt(Math.abs(wb.pending))}</span>`, pendingLabel],
+    ].map(([k, v, hh]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="h">${hh}</div></div>`).join("");
+    $("wbpEmpty").textContent = wb.payments.length ? "" : "No payments recorded yet.";
+    $("wbpRows").innerHTML = wb.payments.map(p => `<tr>
+      <td data-l="Date">${esc(fmtDate(p.date))}</td>
+      <td data-l="Note" style="text-align:left;white-space:normal">${esc(p.note || "")}</td>
+      <td data-l="Amount (LKR)" class="m" data-o="amount">LKR ${fmt(p.amount)}</td>
+      <td class="editor-only" style="text-align:center"><button class="link danger wbp-del" data-id="${esc(p.id)}" aria-label="Delete payment">✕</button></td>
+    </tr>`).join("");
+  }
+
+  function renderFloat() {
+    const fl = computeFloat(cur);
+    const closingColor = fl.closing > 0 ? "var(--warn)" : "var(--ok)";
+    const closingLabel = fl.closing > 0 ? "owed to secretary" : "fully settled";
+    $("floatStats").innerHTML = [
+      ["Carried from last month", fmt(fl.opening), "secretary owed"],
+      ["+ Advanced this month", fmt(fl.advances), "LKR"],
+      ["− Recovered this month", fmt(fl.recoveries), "LKR"],
+      ["= Outstanding", `<span style="color:${closingColor};font-weight:700">${fmt(fl.closing)}</span>`, closingLabel],
+    ].map(([k, v, hh]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="h">${hh}</div></div>`).join("");
+    $("floatEmpty").textContent = fl.entries.length ? "" : "No float entries this month.";
+    $("floatRows").innerHTML = fl.entries.map(e => `<tr>
+      <td data-l="Date">${esc(fmtDate(e.date))}</td>
+      <td data-l="Note" style="text-align:left;white-space:normal">${esc(e.note || "")}</td>
+      <td data-l="Type" style="text-align:left"><span class="float-pill ${e.type}">${e.type === "advance" ? "Advance" : "Recover"}</span></td>
+      <td data-l="Amount (LKR)" class="m" data-o="amount">LKR ${fmt(e.amount)}</td>
+      <td class="editor-only" style="text-align:center"><button class="link danger float-del" data-id="${esc(e.id)}" aria-label="Delete float entry">✕</button></td>
+    </tr>`).join("");
+  }
+
+  function renderSettings() {
+    const cfg = doc.config || { maintenanceFee: [], securityFee: [] };
+    $("cfgMaintFrom").value = thisMonth();
+    const curMaint = getRateForMonth(cfg.maintenanceFee, thisMonth());
+    $("cfgMaintAmt").value = curMaint?.perUnit ?? "";
+    const maintHist = [...(cfg.maintenanceFee || [])].sort((a, b) => b.fromMonth.localeCompare(a.fromMonth));
+    $("cfgMaintHistory").innerHTML = maintHist.length
+      ? `<table><thead><tr><th>From month</th><th class="th-amount">Fee per house</th><th class="editor-only" style="width:32px"></th></tr></thead>
+         <tbody>${maintHist.map(r => `<tr>
+           <td>${esc(monthLabel(r.fromMonth))}</td>
+           <td class="m">LKR ${fmt(r.perUnit)}</td>
+           <td class="editor-only" style="text-align:center"><button class="link danger cfg-maint-del" data-from="${esc(r.fromMonth)}" aria-label="Delete rate">✕</button></td>
+         </tr>`).join("")}</tbody></table>`
+      : `<div class="empty-state">No rates configured yet.</div>`;
+    $("cfgSecFrom").value = thisMonth();
+    const curSec = getRateForMonth(cfg.securityFee, thisMonth());
+    $("cfgSecAmt").value = curSec?.amount ?? "";
+    const secHist = [...(cfg.securityFee || [])].sort((a, b) => b.fromMonth.localeCompare(a.fromMonth));
+    $("cfgSecHistory").innerHTML = secHist.length
+      ? `<table><thead><tr><th>From month</th><th class="th-amount">Monthly fee</th><th class="editor-only" style="width:32px"></th></tr></thead>
+         <tbody>${secHist.map(r => `<tr>
+           <td>${esc(monthLabel(r.fromMonth))}</td>
+           <td class="m">LKR ${fmt(r.amount)}</td>
+           <td class="editor-only" style="text-align:center"><button class="link danger cfg-sec-del" data-from="${esc(r.fromMonth)}" aria-label="Delete rate">✕</button></td>
+         </tr>`).join("")}</tbody></table>`
+      : `<div class="empty-state">No rates configured yet.</div>`;
   }
 
   // ---- Other Transactions tab ----
@@ -1534,7 +1754,7 @@ tfoot td { background: #e7efe9; border: 1pt solid #245C45; border-top: 2pt solid
 
   // ---- Persist ----
   async function persist(months, note) {
-    const data = { houses: doc.houses?.length ? doc.houses : HOUSES, months: months.sort((a, b) => a.month.localeCompare(b.month)) };
+    const data = { houses: doc.houses?.length ? doc.houses : HOUSES, months: months.sort((a, b) => a.month.localeCompare(b.month)), ...(doc.config ? { config: doc.config } : {}) };
     doc = await api("", { method: "PUT", body: JSON.stringify({ data, note }) });
     renderVersions();
   }
@@ -1650,6 +1870,15 @@ tfoot td { background: #e7efe9; border: 1pt solid #245C45; border-top: 2pt solid
     renderMaintenance();
   };
   $("expCard").addEventListener("click", e => {
+    const qbtn = e.target.closest(".exp-quick");
+    if (qbtn && editor) {
+      $("expGroup").value = qbtn.dataset.group;
+      if (qbtn.dataset.amount) $("expAmt").value = qbtn.dataset.amount;
+      if (!$("expDate").value) $("expDate").value = new Date().toISOString().slice(0, 10);
+      $("expDesc").value = qbtn.dataset.desc;
+      $("expAmt").focus();
+      return;
+    }
     const btn = e.target.closest(".exp-del"); if (!btn || !editor) return;
     if (!cur.maint) return;
     cur.maint.expenses = cur.maint.expenses.filter(x => x.id !== btn.dataset.id);
@@ -1675,6 +1904,82 @@ tfoot td { background: #e7efe9; border: 1pt solid #245C45; border-top: 2pt solid
     renderOther();
   });
 
+  // Water board payment handlers
+  $("addWbp").onclick = () => {
+    if (!editor) return;
+    const date = $("wbpDate").value.trim(), amount = num($("wbpAmt").value), note = $("wbpNote").value.trim();
+    if (!date) return toast("Enter a date");
+    if (!Number.isFinite(amount) || amount <= 0) return toast("Enter a valid amount");
+    (cur.maint ||= blankMaint()).waterBoardPayments = cur.maint.waterBoardPayments || [];
+    cur.maint.waterBoardPayments.push({ id: makeWbpId(), date, amount, note });
+    $("wbpAmt").value = ""; $("wbpNote").value = "";
+    renderMaintenance();
+  };
+  $("waterBoardCard").addEventListener("click", e => {
+    const btn = e.target.closest(".wbp-del"); if (!btn || !editor) return;
+    if (!cur.maint) return;
+    cur.maint.waterBoardPayments = (cur.maint.waterBoardPayments || []).filter(x => x.id !== btn.dataset.id);
+    renderMaintenance();
+  });
+
+  // Float handlers
+  $("addFloat").onclick = () => {
+    if (!editor) return;
+    const type = $("floatType").value, date = $("floatDate").value.trim();
+    const amount = num($("floatAmt").value), note = $("floatNote").value.trim();
+    if (!date) return toast("Enter a date");
+    if (!Number.isFinite(amount) || amount <= 0) return toast("Enter a valid amount");
+    (cur.maint ||= blankMaint()).float = cur.maint.float || [];
+    cur.maint.float.push({ id: makeFloatId(), type, date, amount, note });
+    $("floatAmt").value = ""; $("floatNote").value = "";
+    renderMaintenance();
+  };
+  $("floatCard").addEventListener("click", e => {
+    const btn = e.target.closest(".float-del"); if (!btn || !editor) return;
+    if (!cur.maint) return;
+    cur.maint.float = (cur.maint.float || []).filter(x => x.id !== btn.dataset.id);
+    renderMaintenance();
+  });
+
+  // Settings handlers
+  $("saveCfgMaint").onclick = async () => {
+    if (!editor) return;
+    const fromMonth = $("cfgMaintFrom").value, perUnit = num($("cfgMaintAmt").value);
+    if (!fromMonth) return toast("Select a month");
+    if (!Number.isFinite(perUnit) || perUnit < 0) return toast("Enter a valid fee");
+    (doc.config ||= { maintenanceFee: [], securityFee: [] }).maintenanceFee =
+      doc.config.maintenanceFee.filter(r => r.fromMonth !== fromMonth);
+    doc.config.maintenanceFee.push({ fromMonth, perUnit });
+    try { await persist(doc.months, `Updated maintenance fee from ${monthLabel(fromMonth)}`); renderSettings(); toast("Maintenance fee saved"); }
+    catch (e) { toast("Couldn't save: " + e.message); }
+  };
+  $("tab-settings").addEventListener("click", e => {
+    const btn = e.target.closest(".cfg-maint-del");
+    if (btn && editor) {
+      (doc.config ||= { maintenanceFee: [], securityFee: [] }).maintenanceFee =
+        doc.config.maintenanceFee.filter(r => r.fromMonth !== btn.dataset.from);
+      persist(doc.months, "Deleted maintenance fee rate").then(() => { renderSettings(); toast("Rate deleted"); }).catch(err => toast("Couldn't save: " + err.message));
+      return;
+    }
+    const btn2 = e.target.closest(".cfg-sec-del");
+    if (btn2 && editor) {
+      (doc.config ||= { maintenanceFee: [], securityFee: [] }).securityFee =
+        doc.config.securityFee.filter(r => r.fromMonth !== btn2.dataset.from);
+      persist(doc.months, "Deleted security fee rate").then(() => { renderSettings(); toast("Rate deleted"); }).catch(err => toast("Couldn't save: " + err.message));
+    }
+  });
+  $("saveCfgSec").onclick = async () => {
+    if (!editor) return;
+    const fromMonth = $("cfgSecFrom").value, amount = num($("cfgSecAmt").value);
+    if (!fromMonth) return toast("Select a month");
+    if (!Number.isFinite(amount) || amount < 0) return toast("Enter a valid fee");
+    (doc.config ||= { maintenanceFee: [], securityFee: [] }).securityFee =
+      doc.config.securityFee.filter(r => r.fromMonth !== fromMonth);
+    doc.config.securityFee.push({ fromMonth, amount });
+    try { await persist(doc.months, `Updated security fee from ${monthLabel(fromMonth)}`); renderSettings(); toast("Security fee saved"); }
+    catch (e) { toast("Couldn't save: " + e.message); }
+  };
+
   // Versions restore
   $("versions").addEventListener("click", async e => {
     const id = e.target.closest("[data-restore]")?.dataset.restore; if (!id) return;
@@ -1688,6 +1993,7 @@ tfoot td { background: #e7efe9; border: 1pt solid #245C45; border-top: 2pt solid
   // ---- Boot ----
   (async () => {
     try { doc = await api(); } catch (e) { $("hist").innerHTML = `<span class="msg bad">Couldn't load: ${esc(e.message)}</span>`; return; }
+    if (!doc.config) doc.config = { maintenanceFee: [], securityFee: [] };
     if (editKey) {
       try { editor = (await api("?check=1")).name; } catch (_) { toast("This edit link is no longer valid — view only"); }
     }

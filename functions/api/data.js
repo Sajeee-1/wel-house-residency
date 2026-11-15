@@ -52,6 +52,15 @@ function validate(data) {
       for (const e of m.maint.expenses || []) {
         if (!e.id || !e.date || !e.desc || !e.group || !(Number(e.amount) >= 0)) return `Invalid expense entry in ${m.month}`;
       }
+      if (!Array.isArray(m.maint.waterBoardPayments ?? [])) return `Invalid waterBoardPayments for ${m.month}`;
+      for (const p of m.maint.waterBoardPayments || []) {
+        if (!p.id || !p.date || !(Number(p.amount) >= 0)) return `Invalid waterBoardPayment in ${m.month}`;
+      }
+      if (!Array.isArray(m.maint.float ?? [])) return `Invalid float for ${m.month}`;
+      for (const f of m.maint.float || []) {
+        if (!f.id || !f.date || !["advance","recover"].includes(f.type) || !(Number(f.amount) >= 0)) return `Invalid float entry in ${m.month}`;
+      }
+      if (m.maint.floatOpening != null && !Number.isFinite(Number(m.maint.floatOpening))) return `Invalid floatOpening for ${m.month}`;
     }
     if (m.other != null) {
       if (!Array.isArray(m.other.transactions ?? [])) return `Invalid other for ${m.month}`;
@@ -59,6 +68,17 @@ function validate(data) {
         if (!t.id || !t.date || !t.desc || !["income", "expense"].includes(t.type) || !(Number(t.amount) >= 0))
           return `Invalid other transaction in ${m.month}`;
       }
+    }
+  }
+  if (data.config != null) {
+    if (typeof data.config !== "object" || Array.isArray(data.config)) return "Invalid config";
+    if (!Array.isArray(data.config.maintenanceFee ?? [])) return "Invalid config.maintenanceFee";
+    for (const r of data.config.maintenanceFee || []) {
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(r?.fromMonth || "") || !(Number(r.perUnit) >= 0)) return "Invalid maintenanceFee rate";
+    }
+    if (!Array.isArray(data.config.securityFee ?? [])) return "Invalid config.securityFee";
+    for (const r of data.config.securityFee || []) {
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(r?.fromMonth || "") || !(Number(r.amount) >= 0)) return "Invalid securityFee rate";
     }
   }
   return null;
